@@ -67,7 +67,7 @@ Quantile = 0.5
 #%%
 tracer = tTracer(aSSociator, stat_funcs, trajectory_stats, Max_occlusion, Quantile, sub_dir)
 #%%
-indx = 33
+indx = 69
 string = '/'+'test_new_constr_%i_'%indx+str(Max_occlusion)
 #%%
 tracer.dump_data(string, 15, 5)
