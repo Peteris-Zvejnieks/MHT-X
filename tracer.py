@@ -1,4 +1,5 @@
 from visualizerV2 import Graph_interpreter
+import matplotlib.pyplot as plt
 from optimizer import Optimizer
 from PIL import Image
 from tqdm import tqdm
@@ -21,7 +22,9 @@ class Tracer():
                  path,
                  dim = 2):
 
-        self.dataset            = np.array(pd.read_excel('%s\\dataset.xlsx'%path))
+        dataset                 = pd.read_csv('%s\\dataset.csv'%path)
+        self.columns            = dataset.columns
+        self.dataset            = np.array(dataset)
         index                   = pd.MultiIndex.from_tuples(list(map(tuple, np.array(self.dataset, dtype = np.uint16)[:,:2])))
         self.multi_indexed      = pd.DataFrame(self.dataset[:,:2].astype(np.uint16), index = index)
         self.path               = path
@@ -133,12 +136,16 @@ class Tracer():
         interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
         interpretation.events()
         interpretation.families()
-
+        
         try: os.mkdir(output_path + '/trajectories')
-        except FileExistsError:
-            map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
-            map(os.remove, glob.glob(output_path + '/trajectories/**.jpg'))
-
+        except FileExistsError: os.remove(output_path + '/trajectories/events.csv')
+        try: os.makedirs(output_path + '/trajectories/Images')
+        except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/Images/**.jpg'))
+        try: os.makedirs(output_path + '/trajectories/changes')
+        except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/changes/**.csv'))
+        try: os.makedirs(output_path + '/trajectories/data')
+        except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/data/**.csv'))
+        
 
         cols = ['dt'] + ['d'+x for x in self.columns[2:]] + ['likelihoods']
         for i, track in tqdm(enumerate(interpretation.trajectories), desc = 'Saving trajectories: '):
@@ -156,18 +163,18 @@ class Tracer():
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
             ax.set_zlabel('Z')
-            plt.savefig(output_path + '/trajectories/trajectory_%i.jpg'%i)
+            plt.savefig(output_path + '/trajectories/Images/trajectory_%i.jpg'%i)
             plt.close()
 
             table = pd.DataFrame(data = track.data, columns = self.columns)
-            table.to_csv(output_path + '/trajectories/data_%i.csv'%i)
+            table.to_csv(output_path + '/trajectories/data/data_%i.csv'%i, index = False)
 
             table = pd.DataFrame(data = track.changes, columns = cols)
-            table.to_csv(output_path + '/trajectories/changes_%i.csv'%i)
+            table.to_csv(output_path + '/trajectories/changes/changes_%i.csv'%i, index = False)
 
         with open(output_path + '/trajectories/events.csv', 'w') as file:
             events_str = ''
-            for event in interpretation.events: events_str += str(event) + '\n'
+            for event in interpretation.Events: events_str += str(event) + '\n'
             file.write(events_str)
 
 class Fib:

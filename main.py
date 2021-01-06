@@ -17,7 +17,7 @@ w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 2
+I = 0
 
 J = 0
 
@@ -40,8 +40,9 @@ entry   = exit_entry_func(-A, Height - Boundary, 0, 0)
 
 Sig_displacement_movement_split_merge   = 0.01 #@param {type:"slider", min:0, max:150}
 Weight_split_merge                      = 0.5 #@param {type:"slider", min:0, max:1, step:0.01}
-merge  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 0)
-split  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 1)
+Power = 1
+merge  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 0, Power)
+split  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 1, Power)
 
 stat_funcs = [move, exitt, entry, split, merge]
 #%%
@@ -59,13 +60,13 @@ aSSociator = aAssociator(asc_condition, comb_constr)
 #%%
 Mu_Vel0     = 0.0025 #@param {type:"slider", min:0, max:100}
 Sig_Vel0    = 0.01 #@param {type:"slider", min:0, max:100}
-R_sig_Area0 = 0.5 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
-trajectory_stats = bubble_trajectory_with_default_stats(Mu_Vel0, Sig_Vel0, R_sig_Area0)
+R_sig_Volume0 = 0.5 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
+trajectory_stats = bubble_trajectory_with_default_stats(Mu_Vel0, Sig_Vel0, R_sig_Volume0)
 #%%
 Max_occlusion = 1
 Quantile = 0.05
 #%%
-tracer = tTracer(aSSociator, stat_funcs, trajectory_stats, Max_occlusion, Quantile, sub_dir)
+tracer = tTracer(aSSociator, stat_funcs, trajectory_stats, Max_occlusion, Quantile, sub_dir, dim = 3)
 #%%
 indx = 69
 string = '/'+'test_new_constr_%i_'%indx+str(Max_occlusion)

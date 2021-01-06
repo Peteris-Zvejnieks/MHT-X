@@ -30,7 +30,7 @@ class bubble_trajectory_with_default_stats():
         if len(trajectory) <= 2:
             trajectory.mu_Vel   = self.mu_Vel0
             trajectory.sig_Vel  = self.sig_Vel0
-            trajectory.mu_Volume  = np.average(trajectory.data[:,-2])
+            trajectory.mu_Volume  = np.average(trajectory.data[:,5])
             trajectory.sig_Volume = trajectory.mu_Volume * self.r_sig_Volume0
         else: trajectory._get_stats()
         return trajectory
@@ -41,7 +41,7 @@ class association_condition(Association_condition):
             if stop == start: return False
             dt = start.beginning[0] - stop.ending[0]
             dr = np.linalg.norm(start.beginning[2:4] - stop.ending[2:4])
-            R1, R2 = (3*np.pi*stop.mu_S/4)**(1/3), (3*np.pi*start.mu_S/4)**(1/3)
+            R1, R2 = (3*np.pi*stop.mu_Volume/4)**(1/3), (3*np.pi*start.mu_Volume/4)**(1/3)
 
             if dt <= 0: return False
             if dr > max_displ_per_frame * dt:                                               return False
