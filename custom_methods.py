@@ -1,6 +1,8 @@
 from associator import Association_condition, Combination_constraint
 from trajectories import node_trajectory_base
 from stat_funcs import statFunc
+import numpy as np
+from scipy.stats import norm
 
 class bubble_trajectory(node_trajectory_base):
     def __init__(self, graph):
@@ -47,7 +49,7 @@ class association_condition(Association_condition):
 
             if   dt <= 0:                                                               return False
             elif dr > max_displ_per_frame * dt:                                         return False
-            elif dr > (stop.mu_Area[4]+start.mu_Area[4])/2 * radius_multiplyer * dt:    return False
+            elif dr > (stop.ending[4]+start.beginning[4])/2 * radius_multiplyer * dt:   return False
             if dr < min_displacement * dt:                                              return True
             else:                                                                       return True
 
@@ -100,8 +102,8 @@ class movement_func(statFunc):
             t1  , t2    = stop.ending[0], start.beginning[0]
             dt = t2 - t1
 
-            sig_S = (start.sig_S + stop.sig_S)/2
-            dS    = start.mu_S - stop.mu_S
+            sig_S = (start.sig_Area + stop.sig_Area)/2
+            dS    = start.mu_Area - stop.mu_Area
             b     = likelihood_S(dS, sig_S)
 
             try:
@@ -120,8 +122,8 @@ class movement_func(statFunc):
                 except:
                     p2 = start.positions[0,:]
                     dr      = np.linalg.norm(p2 - p1)
-                    mu_d    = (start.mu_V + stop.mu_V)/2 * dt
-                    sigma_d = (start.sig_V + stop.sig_V)/2 * dt
+                    mu_d    = (start.mu_Vel + stop.mu_Vel)/2 * dt
+                    sigma_d = (start.sig_Vel + stop.sig_Vel)/2 * dt
                     a       = norm.pdf(dr, mu_d, sigma_d)/norm.pdf(mu_d, mu_d, sigma_d)
             finally: return k * a + (1 - k) * b
 
@@ -154,7 +156,7 @@ class split_merge_func(statFunc):
             for traject, time in zip(trajectories, ts):
                 try:
                     positions.append(traject(t))
-                    Ss.append(traject.mu_V)
+                    Ss.append(traject.mu_Area)
                     dts.append(abs(time - t))
                 except: pass
 
@@ -166,11 +168,11 @@ class split_merge_func(statFunc):
             else:
                 a=0
 
-            S       = np.sum(np.array([traject.mu_V for traject in trajectories]))
-            sig_S   = np.sum(np.array([tr.sig_S for tr in trajectories]))
+            S       = np.sum(np.array([traject.mu_Area for traject in trajectories]))
+            sig_S   = np.sum(np.array([tr.sig_Area for tr in trajectories]))
 
-            dS      = trajectory.mu_S - S
-            S_sig   = (trajectory.sig_S + sig_S)/2
+            dS      = trajectory.mu_Area - S
+            S_sig   = (trajectory.sig_Area + sig_S)/2
             b       = likelihood_S(dS, S_sig)
 
             return k * a + (1 - k) * b
@@ -187,12 +189,12 @@ class exit_entry_func(statFunc):
                 trajectory, dt = start[0], -1
                 t = trajectory.beginning[0] + dt
                 try:    y = trajectory(t)[axis]
-                except: y = trajectory.positions[0, axis] + trajectory.mu_V * dt
+                except: y = trajectory.positions[0, axis] + trajectory.mu_Vel * dt
             else:
                 trajectory, dt = stop[0], 1
                 t = trajectory.ending[0] + dt
                 try:    y = trajectory(t)[axis]
-                except: y = trajectory.positions[-1, axis]  + trajectory.mu_V * dt
+                except: y = trajectory.positions[-1, axis]  + trajectory.mu_Vel * dt
             return f0(y)
 
         super().__init__(f, [1 - c, c])
