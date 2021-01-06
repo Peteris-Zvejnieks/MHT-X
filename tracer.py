@@ -1,4 +1,4 @@
-from visualizerV2 import Visualizer, Graph_interpreter
+from visualizerV2 import Graph_interpreter
 from optimizer import Optimizer
 from PIL import Image
 from tqdm import tqdm
@@ -124,64 +124,51 @@ class Tracer():
         self.params     = nx.get_node_attributes(self.graph, 'params')
 
     def dump_data(self, sub_folder = None, memory = 15, smallest_trajectories = 1):
-        self.images = unzip_images('%s\\Compressed Data\\Shapes.zip'%self.path)
-        self.shape = self.images[0].shape
-
         if sub_folder is None:  output_path = self.path + '/Tracer Output'
         else:                   output_path = self.path + '/Tracer Output' + sub_folder
         try: os.makedirs(output_path)
         except: pass
 
-        def save_func(path, imgs):
-            try: os.mkdir(path)
-            except FileExistsError:
-                for old_img in glob.glob(path+'/**.jpg'): os.remove(old_img)
-            for i, x in tqdm(enumerate(imgs), desc = 'Saving: ' + path.split('/')[-1]): imageio.imwrite(path+'/%i.jpg'%i, x)
-
         nx.readwrite.gml.write_gml(self.graph, output_path + '/graph.gml', stringizer = lambda x: str(x))
         interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
-        self.trajectories = interpretation.trajectories
         interpretation.events()
         interpretation.families()
-        Vis = Visualizer(self.images, interpretation)
 
-        map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
-        save_func(output_path + '/trajectories',      Vis.ShowTrajectories())
-        for i, track in enumerate(interpretation.trajectories):
-            with open(output_path + '/trajectories/data_%i.csv'%i, 'w'): pass
-            np.savetxt(output_path + '/trajectories/data_%i.csv'%i, track.data, delimiter=",")
+        try: os.mkdir(output_path + '/trajectories')
+        except FileExistsError:
+            map(os.remove, glob.glob(output_path + '/trajectories/**.csv'))
+            map(os.remove, glob.glob(output_path + '/trajectories/**.jpg'))
 
-            with open(output_path + '/trajectories/changes_%i.csv'%i, 'w'): pass
-            np.savetxt(output_path + '/trajectories/changes_%i.csv'%i, track.changes, delimiter=",")
+
+        cols = ['dt'] + ['d'+x for x in self.columns[2:]] + ['likelihoods']
+        for i, track in tqdm(enumerate(interpretation.trajectories), desc = 'Saving trajectories: '):
+
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            X, Y, Z = track.positions[:,0], track.positions[:,1], track.positions[:,2]
+            zeros = np.zeros_like(Z)
+            ax.plot(X, Y, Z, label='parametric curve', marker='o', ms=1, mec = 'black')
+            ax.plot(X, Y, zeros, label='parametric curve',  ms=1)
+            ax.plot(X, zeros + 0.03, Z, label='parametric curve',  ms=1)
+            ax.plot(zeros, Y, Z, label='parametric curve',  ms=1)
+            ax.set(xlim = (0, 0.09), ylim = (0, 0.03), zlim=(0.015, 0.135))
+            plt.tight_layout()
+            ax.set_xlabel('X')
+            ax.set_ylabel('Y')
+            ax.set_zlabel('Z')
+            plt.savefig(output_path + '/trajectories/trajectory_%i.jpg'%i)
+            plt.close()
+
+            table = pd.DataFrame(data = track.data, columns = self.columns)
+            table.to_csv(output_path + '/trajectories/data_%i.csv'%i)
+
+            table = pd.DataFrame(data = track.changes, columns = cols)
+            table.to_csv(output_path + '/trajectories/changes_%i.csv'%i)
 
         with open(output_path + '/trajectories/events.csv', 'w') as file:
             events_str = ''
-            for event in interpretation.Events: events_str += str(event) + '\n'
+            for event in interpretation.events: events_str += str(event) + '\n'
             file.write(events_str)
-
-        save_func(output_path + '/families',          Vis.ShowFamilies('likelihood'))
-        save_func(output_path + '/familiesID',        Vis.ShowFamilies('ID'))
-        save_func(output_path + '/tracedIDs',         Vis.ShowHistory(memory, smallest_trajectories, 'ID'))
-        save_func(output_path + '/traced_velocities', Vis.ShowHistory(memory, smallest_trajectories, 'velocity'))
-
-        del Vis, self.images
-
-def unzip_images(path):
-    imgFromZip  = lambda name: Image.open(io.BytesIO(zp.read(name)))
-    with zipfile.ZipFile(path) as zp:
-        names = zp.namelist()
-        try:    names.remove(*[x for x in names if len(x.split('/')[-1]) == 0 or x.split(',')[-1] == 'ini'])
-        except: pass
-        names.sort(key = lambda x: int(x.split('/')[-1].split('_')[-1].split('.')[0]))
-        images = list(map(imgFromZip, tqdm(names, desc = 'Loading images ')))
-
-    scaler_f = lambda x: (2**-8 * int(np.max(x) >= 256) + int(np.max(x) < 256) + 254 * int(np.max(x) == 1))
-    scaler   = scaler_f(np.asarray(images[0], np.uint16))
-
-    mapper = lambda img:  np.repeat((np.asarray(img, np.uint16) * scaler).astype(np.uint8)[:,:,np.newaxis],3,2)
-    images = list(map(mapper, tqdm(images, desc = 'Mapping images ')))
-
-    return images
 
 class Fib:
     def __init__(self, maxx):

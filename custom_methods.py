@@ -18,40 +18,36 @@ class bubble_trajectory(node_trajectory_base):
         velocities   = np.linalg.norm(self.displacements, axis = 1)/self.changes[:,0]
         self.mu_Vel     = np.average(velocities)
         self.sig_Vel    = np.std(velocities)
-        self.mu_Area    = np.average((A := self.data[:,-2]))
-        self.sig_Area   = np.std(A)
+        self.mu_Volume    = np.average((A := self.data[:,5]))
+        self.sig_Volume   = np.std(A)
 
 class bubble_trajectory_with_default_stats():
-    def __init__(self, mu_Vel0, sig_Vel0, r_sig_Area0):
-        self.mu_Vel0, self.sig_Vel0, self.r_sig_Area0 = mu_Vel0, sig_Vel0, r_sig_Area0
+    def __init__(self, mu_Vel0, sig_Vel0, r_sig_Volume0):
+        self.mu_Vel0, self.sig_Vel0, self.r_sig_Volume0 = mu_Vel0, sig_Vel0, r_sig_Volume0
 
     def __call__(self, graph):
         trajectory = bubble_trajectory(graph)
         if len(trajectory) <= 2:
             trajectory.mu_Vel   = self.mu_Vel0
             trajectory.sig_Vel  = self.sig_Vel0
-            trajectory.mu_Area  = np.average(trajectory.data[:,-2])
-            trajectory.sig_Area = trajectory.mu_Area * self.r_sig_Area0
+            trajectory.mu_Volume  = np.average(trajectory.data[:,-2])
+            trajectory.sig_Volume = trajectory.mu_Volume * self.r_sig_Volume0
         else: trajectory._get_stats()
         return trajectory
 
 class association_condition(Association_condition):
-    def __init__(self,
-                 max_displ_per_frame = 45,
-                 radius_multiplyer = 2.5,
-                 min_displacement = 30):
-
+    def __init__(self, max_displ_per_frame, radius_multiplyer, min_displacement):
         def f(stop, start):
-            if stop == start:                                                           return False
-
+            if stop == start: return False
             dt = start.beginning[0] - stop.ending[0]
             dr = np.linalg.norm(start.beginning[2:4] - stop.ending[2:4])
+            R1, R2 = (3*np.pi*stop.mu_S/4)**(1/3), (3*np.pi*start.mu_S/4)**(1/3)
 
-            if   dt <= 0:                                                               return False
-            elif dr > max_displ_per_frame * dt:                                         return False
-            elif dr > (stop.ending[4]+start.beginning[4])/2 * radius_multiplyer * dt:   return False
-            if dr < min_displacement * dt:                                              return True
-            else:                                                                       return True
+            if dt <= 0: return False
+            if dr > max_displ_per_frame * dt:                                               return False
+            if dr > (R1+R2)/2 * radius_multiplyer * dt:                                     return False
+            if dr < min_displacement * dt:                                                  return True
+            else:                                                                           return True
 
         super().__init__(f)
 
@@ -76,14 +72,14 @@ class combination_constraint(Combination_constraint):
                     acc = 2 * (v - mid_v)/(start.changes[0,0] + dt)
                     if np.linalg.norm(acc) > max_a: return False
                     if d_fi(mid_v, v) > (np.pi + 1e-3) * np.exp(-np.linalg.norm(v)/v_scaler): return False
-            #Area check
+            #Volume check
             S1, S2, sigs = 0, 0, 0
             for stop in stops:
-                S1   += stop.mu_Area
-                sigs += stop.mu_Area / stop.mu_Area
+                S1   += stop.mu_Volume
+                sigs += stop.mu_Volume / stop.mu_Volume
             for start in starts:
-                S2   += start.mu_Area
-                sigs += start.mu_Area / start.mu_Area
+                S2   += start.mu_Volume
+                sigs += start.mu_Volume / start.mu_Volume
             sigs     /= len(stops) + len(starts)
             if abs(S2 - S1)/max(S2, S1) < upsilon * sigs:
                 return True
@@ -102,8 +98,8 @@ class movement_func(statFunc):
             t1  , t2    = stop.ending[0], start.beginning[0]
             dt = t2 - t1
 
-            sig_S = (start.sig_Area + stop.sig_Area)/2
-            dS    = start.mu_Area - stop.mu_Area
+            sig_S = (start.sig_Volume + stop.sig_Volume)/2
+            dS    = start.mu_Volume - stop.mu_Volume
             b     = likelihood_S(dS, sig_S)
 
             try:
@@ -156,7 +152,7 @@ class split_merge_func(statFunc):
             for traject, time in zip(trajectories, ts):
                 try:
                     positions.append(traject(t))
-                    Ss.append(traject.mu_Area)
+                    Ss.append(traject.mu_Volume)
                     dts.append(abs(time - t))
                 except: pass
 
@@ -168,11 +164,11 @@ class split_merge_func(statFunc):
             else:
                 a=0
 
-            S       = np.sum(np.array([traject.mu_Area for traject in trajectories]))
-            sig_S   = np.sum(np.array([tr.sig_Area for tr in trajectories]))
+            S       = np.sum(np.array([traject.mu_Volume for traject in trajectories]))
+            sig_S   = np.sum(np.array([tr.sig_Volume for tr in trajectories]))
 
-            dS      = trajectory.mu_Area - S
-            S_sig   = (trajectory.sig_Area + sig_S)/2
+            dS      = trajectory.mu_Volume - S
+            S_sig   = (trajectory.sig_Volume + sig_S)/2
             b       = likelihood_S(dS, S_sig)
 
             return k * a + (1 - k) * b
