@@ -38,8 +38,8 @@ Height              = 1208
 exitt   = exit_entry_func(A, Boundary, 1, 0)
 entry   = exit_entry_func(-A, Height - Boundary, 0, 0)
 
-Sig_displacement_movement_split_merge   = 30 #@param {type:"slider", min:0, max:150}
-Weight_split_merge                      = 0.7 #@param {type:"slider", min:0, max:1, step:0.01}
+Sig_displacement_movement_split_merge   = 30 
+Weight_split_merge                      = 0.7
 merge  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 0)
 split  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 1)
 
@@ -57,9 +57,9 @@ comb_constr = combination_constraint(Upsilon, Velocity_coefficient, Max_accelera
 
 aSSociator = aAssociator(asc_condition, comb_constr)
 #%%
-Mu_Vel0     = 20 #@param {type:"slider", min:0, max:100}
-Sig_Vel0    = 30 #@param {type:"slider", min:0, max:100}
-R_sig_Area0 = 1 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
+Mu_Vel0     = 20
+Sig_Vel0    = 30
+R_sig_Area0 = 1
 trajectory_stats = bubble_trajectory_with_default_stats(Mu_Vel0, Sig_Vel0, R_sig_Area0)
 #%%
 Max_occlusion = 3
