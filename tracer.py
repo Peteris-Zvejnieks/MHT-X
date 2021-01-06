@@ -124,8 +124,9 @@ class Tracer():
         self.position   = nx.get_node_attributes(self.graph, 'position')
         self.params     = nx.get_node_attributes(self.graph, 'params')
 
-    def dump_data(self, sub_folder = None, memory = 15, smallest_trajectories = 1):
-        self.images = unzip_images('%s\\Compressed Data\\Shapes.zip'%self.path)
+    def dump_data(self, sub_folder = None, images = None, memory = 15, smallest_trajectories = 1):
+        if images is None: self.images = unzip_images('%s\\Compressed Data\\Shapes.zip'%self.path)
+        else: self.images = images
         self.shape = self.images[0].shape
 
         if sub_folder is None:  output_path = self.path + '/Tracer Output'

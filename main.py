@@ -4,6 +4,7 @@ import numpy as np
 from custom_methods import *
 del(Association_condition, Combination_constraint)
 from tracer import Tracer as tTracer
+from tracer import unzip_images
 from associator import Associator as aAssociator
 
 import glob
@@ -16,6 +17,7 @@ drive = 'C:\\'
 w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
+images = unzip_images('%s\\Compressed Data\\Shapes.zip'%sub_dir)
 #%%
 I = 6
 
@@ -34,14 +36,15 @@ move = movement_func(Sig_displacement_movement, Weight_movement)
 
 A                   = 0.1
 Boundary            = 80
-Height              = 1208
-exitt   = exit_entry_func(A, Boundary, 1, 0)
-entry   = exit_entry_func(-A, Height - Boundary, 0, 0)
+Height              = images[0].shape[0]
+exitt   = exit_entry_func(A, Boundary, 1, 1)
+entry   = exit_entry_func(-A, Height - Boundary, 0, 1)
 
-Sig_displacement_movement_split_merge   = 30 
+Sig_displacement_movement_split_merge   = 30
 Weight_split_merge                      = 0.7
-merge  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 0)
-split  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 1)
+Power = 3/2
+merge  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 0, Power)
+split  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 1, Power)
 
 stat_funcs = [move, exitt, entry, split, merge]
 #%%
@@ -59,8 +62,8 @@ aSSociator = aAssociator(asc_condition, comb_constr)
 #%%
 Mu_Vel0     = 20
 Sig_Vel0    = 30
-R_sig_Area0 = 1
-trajectory_stats = bubble_trajectory_with_default_stats(Mu_Vel0, Sig_Vel0, R_sig_Area0)
+R_sig_Volume0 = 1
+trajectory_stats = bubble_trajectory_with_default_stats(Mu_Vel0, Sig_Vel0, R_sig_Volume0)
 #%%
 Max_occlusion = 3
 Quantile = 0.01
