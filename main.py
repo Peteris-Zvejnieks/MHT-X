@@ -28,49 +28,43 @@ sub_dir = sub_dirs[J]
 print(sub_dir)
 del(I, J)
 #%%
-Sig_displacement_movement   = 30
-Weight_movement             = 0.3
-move = movement_func(Sig_displacement_movement, Weight_movement)
+Sig_displacement_movement   = 6
+Sig_acceleration            = 8
+Velocity_scaler             = 6
+Weight_movement1            = 0.6
+Weight_movement2            = 0.56
+move = movement_func(Sig_displacement_movement, Sig_acceleration, Velocity_scaler, Weight_movement1, Weight_movement2)
 
-A                   = 0.1
-Boundary            = 80
-Height              = 1208
+A                   = 0.04
+Boundary            = 15
+Width               = 480
 exitt   = exit_entry_func(A, Boundary, 1, 0)
-entry   = exit_entry_func(-A, Height - Boundary, 0, 0)
+entry   = exit_entry_func(-A, Width - Boundary, 0, 0)
 
-Sig_displacement_movement_split_merge   = 30 #@param {type:"slider", min:0, max:150}
-Weight_split_merge                      = 0.7 #@param {type:"slider", min:0, max:1, step:0.01}
-merge  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 0)
-split  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 1)
-
-stat_funcs = [move, exitt, entry, split, merge]
+stat_funcs = [move, exitt, entry]
 #%%
-Max_displ_per_frame = 200
-Radius_multlplyer   = 6
-Min_displacement    = 60
-asc_condition  = association_condition(Max_displ_per_frame, Radius_multlplyer, Min_displacement)
+Soi = 17
+asc_condition  = association_condition(Soi)
 
-Upsilon                 = 0.6
-Velocity_coefficient    = 300
+Velocity_scaler_constr  = 0.6
 Max_acceleration        = 132
-comb_constr = combination_constraint(Upsilon, Velocity_coefficient, Max_acceleration)
+comb_constr = combination_constraint(Velocity_scaler_constr, Max_acceleration)
 
 aSSociator = aAssociator(asc_condition, comb_constr)
 #%%
-Mu_Vel0     = 20 #@param {type:"slider", min:0, max:100}
-Sig_Vel0    = 30 #@param {type:"slider", min:0, max:100}
-R_sig_Area0 = 1 #@param {type:"slider", min:0.01, max:1.5, step:0.01}
-trajectory_stats = bubble_trajectory_with_default_stats(Mu_Vel0, Sig_Vel0, R_sig_Area0)
+Mu_Vel0     = 20
+Sig_Vel0    = 30
+trajectory_stats = bubble_trajectory_with_default_stats(Mu_Vel0, Sig_Vel0)
 #%%
-Max_occlusion = 3
-Quantile = 0.01
+Max_occlusion = 2
+Quantile = 0.6
 #%%
 tracer = tTracer(aSSociator, stat_funcs, trajectory_stats, Max_occlusion, Quantile, sub_dir)
 #%%
 indx = 69
 string = '/'+'test_new_constr_%i_'%indx+str(Max_occlusion)
 #%%
-tracer.dump_data(string, 15, 1)
+tracer.dump_data(string, 15, 10)
 #%%
 parameters = {name: eval(name) for name in dir() if name[0].isupper() and name != 'In' and name != 'Out'}
 import json
