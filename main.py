@@ -35,10 +35,10 @@ move = movement_func(Sig_displacement_movement, Weight_movement)
 A                   = 0.1
 Boundary            = 80
 Height              = 1208
-exitt   = exit_entry_func(A, Boundary, 1, 0)
-entry   = exit_entry_func(-A, Height - Boundary, 0, 0)
+exitt   = exit_entry_func(A, Boundary, 1, 1)
+entry   = exit_entry_func(-A, Height - Boundary, 0, 1)
 
-Sig_displacement_movement_split_merge   = 30 
+Sig_displacement_movement_split_merge   = 30
 Weight_split_merge                      = 0.7
 merge  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 0)
 split  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 1)
@@ -67,7 +67,7 @@ Quantile = 0.01
 #%%
 tracer = tTracer(aSSociator, stat_funcs, trajectory_stats, Max_occlusion, Quantile, sub_dir)
 #%%
-indx = 69
+indx = 70
 string = '/'+'test_new_constr_%i_'%indx+str(Max_occlusion)
 #%%
 tracer.dump_data(string, 15, 1)
