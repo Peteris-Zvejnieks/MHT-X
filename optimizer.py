@@ -38,7 +38,8 @@ class Optimizer():
                 if likelihood > mem[1]: mem = [x, likelihood]
             if mem[1] == 0: optimizer.Likelihood0(len(X))
             for j, i in enumerate(collection): X[i] = mem[0][j]
-        return [X, self.all_likelihoods[(X, self.pos)], np.prod(self.all_likelihoods[(X, self.pos)])]
+        if (total_likelihood := np.prod(self.all_likelihoods[(X, self.pos)])) == 0: raise Optimizer.Likelihood0('No solution was found')
+        return [X, self.all_likelihoods[(X, self.pos)], total_likelihood]
 
     def _prep(self, associations):
         self.associations, self.Ys, self.n = associations
@@ -78,7 +79,7 @@ class Optimizer():
         for stat_func in self.stat_funcs:
             if stat_func.check_conditions(measurments1, measurments2):
                 likelihood = stat_func(measurments1, measurments2)
-                if not 1 >= likelihood > 0: raise Optimizer.Likelihood0(str(stat_func) + '=> %.4f'%likelihood)
+                if not 1 >= likelihood > 0: print(Optimizer.Likelihood0(str(stat_func) + '=> %.4f'%likelihood))
                 return likelihood
         optimizer.CondtionsNotFound(str(measurments1) + ';' + str(measurments2))
 
