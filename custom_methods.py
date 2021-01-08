@@ -4,7 +4,7 @@ from stat_funcs import statFunc
 import numpy as np
 from scipy.stats import norm
 
-class bubble_trajectory(node_trajectory_base):
+class particle_trajectory(node_trajectory_base):
     def __init__(self, graph):
         super().__init__(graph)
 
@@ -16,15 +16,15 @@ class bubble_trajectory(node_trajectory_base):
 
     def _get_stats(self):
         velocities   = np.linalg.norm(self.displacements, axis = 1)/self.changes[:,0]
-        self.mu_V    = np.average(velocities)
-        self.sig_V   = np.std(velocities)
+        self.mu_Vel    = np.average(velocities)
+        self.sig_Vel   = np.std(velocities)
 
-class bubble_trajectory_with_default_stats():
-    def __init__(self, mu_Vel0, sig_Vel0, r_sig_Area0):
+class particle_trajectory_with_default_stats():
+    def __init__(self, mu_Vel0, sig_Vel0):
         self.mu_Vel0, self.sig_Vel0 = mu_Vel0, sig_Vel0
 
     def __call__(self, graph):
-        trajectory = bubble_trajectory(graph)
+        trajectory = particle_trajectory(graph)
         if len(trajectory) <= 2:
             trajectory.mu_Vel   = self.mu_Vel0
             trajectory.sig_Vel  = self.sig_Vel0
@@ -40,7 +40,7 @@ class association_condition(Association_condition):
             dt = start.beginning[0] - stop.ending[0]
             dr = np.linalg.norm(start.beginning[2:4] - stop.ending[2:4])
 
-            if   dt <= 0:                                                                   return False
+            if t <= 0:                                                                      return False
             if dr > Soi * dt:                                                               return False
             else:                                                                           return True
 

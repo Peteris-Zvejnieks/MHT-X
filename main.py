@@ -17,7 +17,7 @@ w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 6
+I = 20
 
 J = 0
 
@@ -32,7 +32,7 @@ Sig_displacement_movement   = 6
 Sig_acceleration            = 8
 Velocity_scaler             = 6
 Weight_movement1            = 0.6
-Weight_movement2            = 0.56
+Weight_movement2            = 0.5
 move = movement_func(Sig_displacement_movement, Sig_acceleration, Velocity_scaler, Weight_movement1, Weight_movement2)
 
 A                   = 0.04
@@ -43,21 +43,21 @@ entry   = exit_entry_func(-A, Width - Boundary, 0, 0)
 
 stat_funcs = [move, exitt, entry]
 #%%
-Soi = 17
+Soi = 14
 asc_condition  = association_condition(Soi)
 
-Velocity_scaler_constr  = 0.6
-Max_acceleration        = 132
+Velocity_scaler_constr  = 10
+Max_acceleration        = 8
 comb_constr = combination_constraint(Velocity_scaler_constr, Max_acceleration)
 
-aSSociator = aAssociator(asc_condition, comb_constr)
+aSSociator = aAssociator(asc_condition, comb_constr, max_k = 1)
 #%%
-Mu_Vel0     = 20
-Sig_Vel0    = 30
-trajectory_stats = bubble_trajectory_with_default_stats(Mu_Vel0, Sig_Vel0)
+Mu_Vel0     = 22
+Sig_Vel0    = 8
+trajectory_stats = particle_trajectory_with_default_stats(Mu_Vel0, Sig_Vel0)
 #%%
 Max_occlusion = 2
-Quantile = 0.6
+Quantile = 0.4
 #%%
 tracer = tTracer(aSSociator, stat_funcs, trajectory_stats, Max_occlusion, Quantile, sub_dir)
 #%%
