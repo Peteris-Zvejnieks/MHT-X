@@ -33,7 +33,7 @@ Weight_movement             = 0.3
 move = movement_func(Sig_displacement_movement, Weight_movement)
 
 A                   = 0.1
-Boundary            = 80
+Boundary            = 82
 Height              = 1208
 exitt   = exit_entry_func(A, Boundary, 1, 1)
 entry   = exit_entry_func(-A, Height - Boundary, 0, 1)
