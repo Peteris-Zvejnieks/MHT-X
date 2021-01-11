@@ -143,7 +143,6 @@ class Tracer():
         interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
         self.trajectories = interpretation.trajectories
         interpretation.events()
-        interpretation.families()
         Vis = Visualizer(self.images, interpretation)
 
         try: os.mkdir(output_path + '/trajectories')
@@ -171,13 +170,7 @@ class Tracer():
             for event in interpretation.Events: events_str += str(event) + '\n'
             file.write(events_str)
 
-        try: os.mkdir(output_path + '/family_graphs')
-        except FileExistsError: map(os.remove, glob.glob(output_path + '/family_graphs/**.gml'))
-        for i, family_graph in enumerate(interpretation.families):
-            nx.readwrite.gml.write_gml(self.graph, output_path + '/family_graphs/family_%i.gml'%i, stringizer = lambda x: str(x))
 
-        save_func(output_path + '/family_photos',       Vis.ShowFamilies('likelihood'))
-        save_func(output_path + '/family_ID_photos',    Vis.ShowFamilies('ID'))
         save_func(output_path + '/tracedIDs',           Vis.ShowHistory(memory, smallest_trajectories, 'ID'))
         save_func(output_path + '/traced_velocities',   Vis.ShowHistory(memory, smallest_trajectories, 'velocity'))
 
