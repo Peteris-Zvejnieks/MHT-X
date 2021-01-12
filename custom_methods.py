@@ -5,8 +5,12 @@ import numpy as np
 from scipy.stats import norm
 
 class bubble_trajectory(node_trajectory_base):
+    mu_Vel0 = 0
+    sig_Vel0 = 100
+    r_sig_Area0 = 1
     def __init__(self, graph):
         super().__init__(graph)
+        self._get_stats()
 
     def extrapolate(self, t):
         time = self.time[-int(t > self.time[0])]
@@ -15,25 +19,17 @@ class bubble_trajectory(node_trajectory_base):
         return self.interpolate(time) + self.interpolate(t - a * dt/abs(dt), 1) * dt
 
     def _get_stats(self):
-        velocities   = np.linalg.norm(self.displacements, axis = 1)/self.changes[:,0]
-        self.mu_Vel     = np.average(velocities)
-        self.sig_Vel    = np.std(velocities)
-        self.mu_Area    = np.average((A := self.data[:,-2]))
-        self.sig_Area   = np.std(A)
-
-class bubble_trajectory_with_default_stats():
-    def __init__(self, mu_Vel0, sig_Vel0, r_sig_Area0):
-        self.mu_Vel0, self.sig_Vel0, self.r_sig_Area0 = mu_Vel0, sig_Vel0, r_sig_Area0
-
-    def __call__(self, graph):
-        trajectory = bubble_trajectory(graph)
-        if len(trajectory) <= 2:
-            trajectory.mu_Vel   = self.mu_Vel0
-            trajectory.sig_Vel  = self.sig_Vel0
-            trajectory.mu_Area  = np.average(trajectory.data[:,-2])
-            trajectory.sig_Area = trajectory.mu_Area * self.r_sig_Area0
-        else: trajectory._get_stats()
-        return trajectory
+        if len(self) <= 2:
+            self.mu_Vel   = self.mu_Vel0
+            self.sig_Vel  = self.sig_Vel0
+            self.mu_Area  = np.average(self.data[:,-2])
+            self.sig_Area = self.mu_Area * self.r_sig_Area0
+        else:
+            velocities   = np.linalg.norm(self.displacements, axis = 1)/self.changes[:,0]
+            self.mu_Vel     = np.average(velocities)
+            self.sig_Vel    = np.std(velocities)
+            self.mu_Area    = np.average((A := self.data[:,-2]))
+            self.sig_Area   = np.std(A)
 
 class association_condition(Association_condition):
     def __init__(self,

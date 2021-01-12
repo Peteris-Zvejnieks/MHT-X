@@ -24,7 +24,7 @@ J = 0
 sub_dirs = glob.glob(main_dirs[I] + '/*')
 try: sub_dirs.remove(*glob.glob(main_dirs[I] + '/**.ini'))
 except: pass
-sub_dir = sub_dirs[J]
+sub_dir = os.getcwd() + sub_dirs[J][1:]
 print(sub_dir)
 del(I, J)
 #%%
@@ -60,12 +60,14 @@ aSSociator = aAssociator(asc_condition, comb_constr)
 Mu_Vel0     = 20
 Sig_Vel0    = 30
 R_sig_Area0 = 1
-trajectory_stats = bubble_trajectory_with_default_stats(Mu_Vel0, Sig_Vel0, R_sig_Area0)
+bubble_trajectory.mu_Vel0 = Mu_Vel0
+bubble_trajectory.sig_Vel0 = Sig_Vel0
+bubble_trajectory.r_sig_Area0 = R_sig_Area0
 #%%
 Max_occlusion = 3
 Quantile = 0.01
 #%%
-tracer = tTracer(aSSociator, stat_funcs, trajectory_stats, Max_occlusion, Quantile, sub_dir)
+tracer = tTracer(aSSociator, stat_funcs, bubble_trajectory, Max_occlusion, Quantile, sub_dir)
 #%%
 indx = 70
 string = '/'+'test_new_constr_%i_'%indx+str(Max_occlusion)

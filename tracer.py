@@ -21,7 +21,7 @@ class Tracer():
                  path,
                  dim = 2):
 
-        self.dataset            = np.array(dataset := pd.read_excel('%s\\dataset.xlsx'%path))
+        self.dataset            = np.array((dataset := pd.read_excel('%s\\dataset.xlsx'%path)))
         self.columns            = dataset.columns
         index                   = pd.MultiIndex.from_tuples(list(map(tuple, np.array(self.dataset, dtype = np.uint16)[:,:2])))
         self.multi_indexed      = pd.DataFrame(self.dataset[:,:2].astype(np.uint16), index = index)
@@ -43,8 +43,7 @@ class Tracer():
         for i, window_width in enumerate(iterr):
             self._eradicate_unlikely_connections(quantile)
             self._time_sweep(window_width)
-            interpretation = Graph_interpreter(self.graph.copy(), self.special_nodes, self.node_trajectory)
-            print('Trajectory count :' + str(len(interpretation.trajectories)))
+            self._reevaluate_connections()
 
     def _time_sweep(self, window_width):
         for time in tqdm(range(self.time_range[0], self.time_range[1]), desc = 'Window width - %i'%window_width):
@@ -99,6 +98,48 @@ class Tracer():
 
         nodes.sort(key = lambda x: x[0])
         return self.node_trajectory(self.graph.subgraph(set(nodes)))
+
+    def _reevaluate_connections(self):
+            interpretation = Graph_interpreter(self.graph.copy(), self.special_nodes, self.node_trajectory)
+            interpretation.events()
+            print('Trajectory count :' + str(len(interpretation.trajectories)))
+            for stat_func in self.stat_funcs:
+                if stat_func.conditions[0] == 1:
+                    if stat_func.conditions[1] == 1:
+                        for trajecotry in tqdm(interpretation.trajectories, desc = 'Reeeeee evaluating!'):
+                            for i in range(len(trajecotry) - 1):
+                                pieces, edge = trajecotry.split(i)
+                                nx.set_edge_attributes(self.graph, {edge: stat_func([pieces[0]], [pieces[1]])}, 'likelihood')
+                    elif stat_func.conditions[1] == 'n':
+                        for event in interpretation.Events:
+                            if len(event[1]) > 1:
+                                inn  = interpretation.trajectories[event[0][0]]
+                                outs = [interpretation.trajectories[j] for j in event[1]]
+                                edges = [(inn.nodes[-1], j.nodes[0]) for j in outs]
+                                likelihood = stat_func([inn], outs)
+                                nx.set_edge_attributes(self.graph, {edge: likelihood for edge in edges}, 'likelihood')
+                    else:
+                        for event in interpretation.Events:
+                            if type(event[1]) == str:
+                                inn  = interpretation.trajectories[event[0][0]]
+                                edge = (inn.nodes[-1], event[1][0])
+                                likelihood = stat_func([inn], [])
+                                nx.set_edge_attributes(self.graph, {edge: likelihood}, 'likelihood')
+                elif stat_func.conditions[0] == 'n':
+                    for event in interpretation.Events:
+                        if len(event[0]) > 1:
+                            ins  = [interpretation.trajectories[j] for j in event[0]]
+                            out = interpretation.trajectories[event[1][0]]
+                            edges = [(j.nodes[-1], out.nodes[0]) for j in ins]
+                            likelihood = stat_func(ins, [out])
+                            nx.set_edge_attributes(self.graph, {edge: likelihood for edge in edges}, 'likelihood')
+                else:
+                    for event in interpretation.Events:
+                        if type(event[0]) == str:
+                            out  = interpretation.trajectories[event[1][0]]
+                            edge = (event[0][0], out.nodes[0])
+                            likelihood = stat_func([], [out])
+                            nx.set_edge_attributes(self.graph, {edge: likelihood}, 'likelihood')
 
     def _eradicate_unlikely_connections(self, quantile):
         likelihoods             = nx.get_edge_attributes(self.graph, 'likelihood')
