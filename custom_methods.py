@@ -5,8 +5,11 @@ import numpy as np
 from scipy.stats import norm
 
 class particle_trajectory(node_trajectory_base):
+    mu_Vel0 = 0
+    sig_Vel0 = 100
     def __init__(self, graph):
         super().__init__(graph)
+        self._get_stats()
 
     def extrapolate(self, t):
         time = self.time[-int(t > self.time[0])]
@@ -16,20 +19,12 @@ class particle_trajectory(node_trajectory_base):
 
     def _get_stats(self):
         velocities   = np.linalg.norm(self.displacements, axis = 1)/self.changes[:,0]
-        self.mu_Vel    = np.average(velocities)
-        self.sig_Vel   = np.std(velocities)
-
-class particle_trajectory_with_default_stats():
-    def __init__(self, mu_Vel0, sig_Vel0):
-        self.mu_Vel0, self.sig_Vel0 = mu_Vel0, sig_Vel0
-
-    def __call__(self, graph):
-        trajectory = particle_trajectory(graph)
-        if len(trajectory) <= 2:
-            trajectory.mu_Vel   = self.mu_Vel0
-            trajectory.sig_Vel  = self.sig_Vel0
-        else: trajectory._get_stats()
-        return trajectory
+        if len(self) <= 2:
+            self.mu_Vel   = self.mu_Vel0
+            self.sig_Vel  = self.sig_Vel0
+        else:
+            self.mu_Vel    = np.average(velocities)
+            self.sig_Vel   = np.std(velocities)
 
 class association_condition(Association_condition):
     def __init__(self, Soi = 45):
@@ -40,7 +35,7 @@ class association_condition(Association_condition):
             dt = start.beginning[0] - stop.ending[0]
             dr = np.linalg.norm(start.beginning[2:4] - stop.ending[2:4])
 
-            if t <= 0:                                                                      return False
+            if dt <= 0:                                                                      return False
             if dr > Soi * dt:                                                               return False
             else:                                                                           return True
 
