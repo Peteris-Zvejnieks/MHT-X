@@ -43,7 +43,7 @@ entry   = exit_entry_func(-A, Width - Boundary, 0, 0)
 
 stat_funcs = [move, exitt, entry]
 #%%
-Soi = 10
+Soi = 12
 asc_condition  = association_condition(Soi)
 
 Velocity_scaler_constr  = 10
@@ -57,12 +57,12 @@ Sig_Vel0    = 8
 particle_trajectory.Mu_Vel0 = Mu_Vel0
 particle_trajectory.Sig_Vel0 = Sig_Vel0
 #%%
-Max_occlusion = 1
+Max_occlusion = 2
 Quantile = 0.4
 #%%
 tracer = tTracer(aSSociator, stat_funcs, particle_trajectory, Max_occlusion, Quantile, sub_dir)
 #%%
-indx = 18
+indx = 19
 string = '/'+'test_new_constr_%i_'%indx+str(Max_occlusion)
 #%%
 tracer.dump_data(string, 15, 10)

@@ -18,11 +18,11 @@ class particle_trajectory(node_trajectory_base):
         return self.interpolate(time) + self.interpolate(t - a * dt/abs(dt), 1) * dt
 
     def _get_stats(self):
-        velocities   = np.linalg.norm(self.displacements, axis = 1)/self.changes[:,0]
         if len(self) <= 2:
             self.mu_Vel   = self.mu_Vel0
             self.sig_Vel  = self.sig_Vel0
         else:
+            velocities   = np.linalg.norm(self.displacements, axis = 1)/self.changes[:,0]
             self.mu_Vel    = np.average(velocities)
             self.sig_Vel   = np.std(velocities)
 

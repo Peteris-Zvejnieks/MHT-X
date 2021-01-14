@@ -107,38 +107,38 @@ class Tracer():
             if stat_func.conditions[0] == 1:
                 if stat_func.conditions[1] == 1:
                     for trajecotry in tqdm(interpretation.trajectories, desc = 'Reeeeee evaluating!'):
-                        for i in range(len(trajecotry)):
+                        for i in range(len(trajecotry) - 1):
                             pieces, edge = trajecotry.split(i)
                             nx.set_edge_attributes(self.graph, {edge: stat_func([pieces[0]], [pieces[1]])}, 'likelihood')
-                elif stat_func.conditions[1] == n:
+                elif stat_func.conditions[1] == 'n':
                     for event in interpretation.Events:
                         if len(event[1]) > 1:
-                            inn  = [interpretation.trajectories[event[0]]]
+                            inn  = interpretation.trajectories[event[0][0]]
                             outs = [interpretation.trajectories[j] for j in event[1]]
                             edges = [(inn.nodes[-1], j.nodes[0]) for j in outs]
-                            likelihood = stat_func([inn, outs])
+                            likelihood = stat_func([inn], outs)
                             nx.set_edge_attributes(self.graph, {edge: likelihood for edge in edges}, 'likelihood')
                 else:
                     for event in interpretation.Events:
                         if type(event[1]) == str:
-                            inn  = interpretation.trajectories[event[0]]
-                            edge = (inn.nodes[-1], event[1])
-                            likelihood = stat_func([[inn], []])
+                            inn  = interpretation.trajectories[event[0][0]]
+                            edge = (inn.nodes[-1], event[1][0])
+                            likelihood = stat_func([inn], [])
                             nx.set_edge_attributes(self.graph, {edge: likelihood}, 'likelihood')
-            elif stat_func.conditions[0] == n:
+            elif stat_func.conditions[0] == 'n':
                 for event in interpretation.Events:
                     if len(event[0]) > 1:
                         ins  = [interpretation.trajectories[j] for j in event[0]]
-                        out = [interpretation.trajectories[event[0]]]
+                        out = interpretation.trajectories[event[1][0]]
                         edges = [(j.nodes[-1], out.nodes[0]) for j in ins]
-                        likelihood = stat_func([ins, out])
+                        likelihood = stat_func(ins, [out])
                         nx.set_edge_attributes(self.graph, {edge: likelihood for edge in edges}, 'likelihood')
             else:
                 for event in interpretation.Events:
                     if type(event[0]) == str:
-                        out  = interpretation.trajectories[event[1]]
-                        edge = (event[0], out.nodes[0])
-                        likelihood = stat_func([[], [out]])
+                        out  = interpretation.trajectories[event[1][0]]
+                        edge = (event[0][0], out.nodes[0])
+                        likelihood = stat_func([], [out])
                         nx.set_edge_attributes(self.graph, {edge: likelihood}, 'likelihood')
 
     def _eradicate_unlikely_connections(self, quantile):
