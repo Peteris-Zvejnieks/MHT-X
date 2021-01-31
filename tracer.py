@@ -72,6 +72,11 @@ class Tracer():
                         any([self.data[x[1]][0] == time + 1 for x in edges]),
                         likelihood > self.decision_boundary]):
                     self.graph.add_edges_from(edges)
+                    
+    def get_total_log_likelihood(self):
+        likelihoods = nx.get_edge_attributes(self.graph, 'likelihood')
+        likelihoods = np.array(list(likelihoods.values()), dtype = np.longdouble )
+        return -np.sum(np.log10(likelihoods))
 
     def _get_groups(self, start, stop):
         nodes1, nodes2 = [], []
@@ -165,24 +170,22 @@ class Tracer():
         self.position   = nx.get_node_attributes(self.graph, 'position')
         self.params     = nx.get_node_attributes(self.graph, 'params')
 
-    def dump_data(self, sub_folder = None, memory = 15, smallest_trajectories = 1):
-        self.images = unzip_images('%s\\Compressed Data\\Shapes.zip'%self.path)
+    def dump_data(self, sub_folder = None, images = None, memory = 15, smallest_trajectories = 1):
+        if images is None: self.images = unzip_images('%s\\Compressed Data\\Shapes.zip'%self.path)
+        else: self.images = images
         self.shape = self.images[0].shape
+        total_likelihood = self.get_total_log_likelihood()
 
         if sub_folder is None:  output_path = self.path + '/Tracer Output'
-        else:                   output_path = self.path + '/Tracer Output' + sub_folder
+        else:                   output_path = self.path + '/Tracer Output' + sub_folder + '_' + str(total_likelihood)
         try: os.makedirs(output_path)
         except: pass
 
-        def save_func(path, imgs):
-            try: os.makedirs(path)
-            except FileExistsError:
-                for old_img in glob.glob(path+'/**.jpg'): os.remove(old_img)
-            for i, x in tqdm(enumerate(imgs), desc = 'Saving: ' + path.split('/')[-1]): imageio.imwrite(path+'/%i.jpg'%i, x)
-
-        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph.gml', stringizer = lambda x: str(x))
+        def stringizer(value):
+            if type(value) == np.ndarray: return str(list(value))
+            else: return str(value)
+        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph_%i.gml'%total_likelihood, stringizer = stringizer)
         interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
-        self.trajectories = interpretation.trajectories
         interpretation.events()
         interpretation.families()
         Vis = Visualizer(self.images, interpretation)
@@ -191,14 +194,31 @@ class Tracer():
         except FileExistsError:
             try: os.remove(output_path + '/trajectories/events.csv')
             except: pass
-        try: os.makedirs(output_path + '/trajectories/Images')
-        except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/Images/**.jpg'))
+
+        #Trajectory visualization
+        path = output_path + '/trajectories/Images'
+        try: os.makedirs(path)
+        except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
+        Vis.ShowTrajectories(path)
+
+        #History visualization
+        path = output_path + '/tracedIDs'
+        try: os.makedirs(path)
+        except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
+        Vis.ShowHistory(path, memory, smallest_trajectories, 'ID')
+
+        #Family viusalization
+        path = output_path + '/family_ID_photos'
+        try: os.makedirs(path)
+        except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
+        Vis.ShowFamilies(path, 'ID')
+
+        #Trajectory csv output
         try: os.makedirs(output_path + '/trajectories/changes')
         except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/changes/**.csv'))
         try: os.makedirs(output_path + '/trajectories/data')
         except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/data/**.csv'))
 
-        save_func(output_path + '/trajectories/Images',      Vis.ShowTrajectories())
         cols = ['dt'] + ['d'+x for x in self.columns[2:]] + ['likelihoods']
         for i, track in enumerate(interpretation.trajectories):
             table = pd.DataFrame(data = track.data, columns = self.columns)
@@ -208,19 +228,28 @@ class Tracer():
             table.to_csv(output_path + '/trajectories/changes/changes_%i.csv'%i, index = False)
 
         with open(output_path + '/trajectories/events.csv', 'w') as file:
-            events_str = ''
-            for event in interpretation.Events: events_str += str(event) + '\n'
+            events_str = 'Type, In, Out, Frame, X, Y, likelihood\n'
+            for event in interpretation.Events:
+                if type(event[0][0]) is str:
+                    tr = interpretation.trajectories[event[1][0]].beginning
+                    tmp_str = str([0] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
+                elif type(event[1][0]) is str:
+                    tr = interpretation.trajectories[event[0][0]].ending
+                    tmp_str = str([1] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
+                elif len(event[0]) > 1:
+                    tr = interpretation.trajectories[event[1][0]].beginning
+                    tmp_str = str([2] + [str(event[0]).replace(',', ';')[1:-1]] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
+                elif len(event[1]) > 1:
+                    tr = interpretation.trajectories[event[0][0]].ending
+                    tmp_str = str([3] + event[0] + [str(event[1]).replace(',', ';')[1:-1]] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
+                events_str +=  tmp_str
             file.write(events_str)
 
+        #Family graph output
         try: os.mkdir(output_path + '/family_graphs')
         except FileExistsError: map(os.remove, glob.glob(output_path + '/family_graphs/**.gml'))
-        for i, family_graph in enumerate(interpretation.families):
-            nx.readwrite.gml.write_gml(self.graph, output_path + '/family_graphs/family_%i.gml'%i, stringizer = lambda x: str(x))
-
-        save_func(output_path + '/family_photos',       Vis.ShowFamilies('likelihood'))
-        save_func(output_path + '/family_ID_photos',    Vis.ShowFamilies('ID'))
-        save_func(output_path + '/tracedIDs',           Vis.ShowHistory(memory, smallest_trajectories, 'ID'))
-        save_func(output_path + '/traced_velocities',   Vis.ShowHistory(memory, smallest_trajectories, 'velocity'))
+        for i, family_graph in tqdm(enumerate(interpretation.families), desc = 'Writing family graphs: '):
+            nx.readwrite.gml.write_gml(family_graph, output_path + '/family_graphs/family_%i.gml'%i, stringizer = str)
 
         del Vis, self.images
 

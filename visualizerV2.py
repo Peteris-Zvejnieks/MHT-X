@@ -2,6 +2,7 @@ import  numpy as np
 from matplotlib import cm
 from tqdm import tqdm
 import colorsys
+import imageio
 import copy
 import cv2
 import networkx as nx
@@ -101,13 +102,14 @@ class Visualizer():
             else: img = cv2.line(img, crd1, crd2, color, self.width)
         finally: return img
 
-    def ShowFamilies(self, key = 'likelihood'):
+    def ShowFamilies(self, path, key = 'likelihood'):
         cmap = cm.plasma
         color_bar_gen = Colorbar_overlay(cmap, self.shape)
         families = self.interpretation.families
         family_photos = np.zeros((len(families),) + self.shape, dtype = np.uint8)
 
         for i, family in tqdm(enumerate(families), desc = 'Drawing families '):
+            family_photo = np.zeros(self.shape, dtype = np.uint8)
             if key != 'ID':
                 edge_values = nx.get_edge_attributes(family, key)
                 values = list(edge_values.values())
@@ -128,10 +130,10 @@ class Visualizer():
                     else: color = color_mapper(j)
                     for edge in trajectory.backbone.edges:
                         if key != 'ID': color = color_mapper(values[edge])
-                        family_photos[i] = self._draw_edge(family_photos[i], edge, color)
+                        family_photo = self._draw_edge(family_photo, edge, color)
                 except TypeError: continue
                 crd = self._get_node_crd(trajectory.nodes[int(len(trajectory.nodes)/2)])
-                family_photos[i] =  cv2.putText(family_photos[i], str(ID), crd, cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255),2)
+                family_photo =  cv2.putText(family_photo, str(ID), crd, cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255),2)
 
             for edge in family.edges:
                 if key != 'ID': color = color_mapper(edge_values[edge])
@@ -139,25 +141,25 @@ class Visualizer():
                     if key == 'ID': color = (0,  0, 255)
                     R = int(self.width * 2)
                     crd = self._get_node_crd(self.trajectories[edge[1]].nodes[0])
-                    family_photos[i] = cv2.circle(family_photos[i], crd, R, color, self.width)
+                    family_photo = cv2.circle(family_photo, crd, R, color, self.width)
                 elif edge[1] == self.special_nodes[1]:
                     if key == 'ID': color = (0, 255, 0)
                     R = int(self.width * 3)
                     crd = self._get_node_crd(self.trajectories[edge[0]].nodes[-1])
-                    family_photos[i] = cv2.circle(family_photos[i], crd, R, color, self.width)
+                    family_photo = cv2.circle(family_photo, crd, R, color, self.width)
                 else:
                     if key == 'ID':
                         if len(family._succ[edge[0]]) > 1:   color = (255, 0, 255)
                         elif len(family._pred[edge[1]]) > 1: color = (255, 0, 0)
                     edge = (self.trajectories[edge[0]].nodes[-1], self.trajectories[edge[1]].nodes[0])
-                    family_photos[i] = self._draw_edge(family_photos[i], edge, color)
+                    family_photo = self._draw_edge(family_photo, edge, color)
 
             if key != 'ID':
                 color_bar = color_bar_gen(min_max)
-                family_photos[i] = np.where(color_bar != 0, color_bar, family_photos[i])
-        return family_photos
+                family_photo = np.where(color_bar != 0, color_bar, family_photo)
+            imageio.imwrite(path+'/%i.jpg'%i, family_photo)
 
-    def ShowHistory(self, memory = 15, min_trajectory_size = 1, key = 'velocity'):
+    def ShowHistory(self, path, memory = 15, min_trajectory_size = 1, key = 'velocity'):
         events = self.interpretation.Events
         images = copy.deepcopy(self.images)
         dcmap = discrete_colormap(memory * 2)
@@ -194,7 +196,7 @@ class Visualizer():
                 t0 = int(min([self.trajectories[x].data[0,0] for x in starts]))
                 f = lambda x: self._draw_split(x, stops[0], starts)
             for t in range(t0, min(len(images), t0 + memory)): images[t - 1] = f(images[t - 1])
-        return images
+        for i, x in enumerate(images): imageio.imwrite(path+'/%i.jpg'%i, x)
 
     def _draw_merger(self, img, starts, stop):
         color=  (255, 0, 0)
@@ -212,16 +214,17 @@ class Visualizer():
             img = cv2.arrowedLine(img, crd1, crd2, color, self.width)
         return img
 
-    def ShowTrajectories(self, key = 'velocity'):
+    def ShowTrajectories(self, path, key = 'velocity'):
         cmap = cm.plasma
         color_bar_gen = Colorbar_overlay(cmap, self.shape)
-        imgs = np.zeros((len(self.trajectories),) + self.shape, dtype=np.uint8)
         for i, tr in tqdm(enumerate(self.trajectories), desc = 'Drawing trajectories '):
+            img = np.zeros(self.shape, dtype=np.uint8)
             values = nx.get_edge_attributes(tr.backbone, key)
             min_max = [min(tuple(values.values()) + (1e3,)), max(tuple(values.values()) + (0,))]
             for edge in zip(tr.nodes[:-1], tr.nodes[1:]):
                 color = self._map_color(cmap(self._normalizer(values[edge], min_max)))
-                imgs[i] = self._draw_edge(imgs[i], edge, color)
+                img = self._draw_edge(img, edge, color)
             color_bar = color_bar_gen(min_max)
-            imgs[i] = np.where(color_bar != 0, color_bar, imgs[i])
-        return imgs
+            img = np.where(color_bar != 0, color_bar, img)
+            img = img.astype(np.uint8)
+            imageio.imwrite(path+'/%i.jpg'%i, img)
