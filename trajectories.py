@@ -65,7 +65,7 @@ class node_trajectory_base():
     def interpolate(self, t, der = 0): return np.array(interp.splev(t, self.tck, der = der))
 
     def split(self, i):
-        if i >= len(self) - 2: raise IndexError
+        if i > len(self) - 2: raise IndexError
         tmp_graph = self.backbone.copy().to_undirected()
         tmp_graph.remove_edge(self.nodes[i], self.nodes[i + 1])
         trajectories = list(self.backbone.subgraph(c) for c in nx.connected_components(tmp_graph))

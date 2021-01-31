@@ -43,8 +43,7 @@ class Tracer():
         for i, window_width in enumerate(iterr):
             self._eradicate_unlikely_connections(quantile)
             self._time_sweep(window_width)
-            interpretation = Graph_interpreter(self.graph.copy(), self.special_nodes, self.node_trajectory)
-            print('Trajectory count :' + str(len(interpretation.trajectories)))
+            self._reevaluate_connections()
 
     def _time_sweep(self, window_width):
         for time in tqdm(range(self.time_range[0], self.time_range[1]), desc = 'Window width - %i'%window_width):
@@ -73,6 +72,10 @@ class Tracer():
                         any([self.data[x[1]][0] == time + 1 for x in edges]),
                         likelihood > self.decision_boundary]):
                     self.graph.add_edges_from(edges)
+    def get_total_log_likelihood(self):
+        likelihoods = nx.get_edge_attributes(self.graph, 'likelihood')
+        likelihoods = np.array(list(likelihoods.values()), dtype = np.longdouble )
+        return -np.sum(np.log10(likelihoods))
 
     def _get_groups(self, start, stop):
         nodes1, nodes2 = [], []
@@ -99,6 +102,48 @@ class Tracer():
 
         nodes.sort(key = lambda x: x[0])
         return self.node_trajectory(self.graph.subgraph(set(nodes)))
+
+    def _reevaluate_connections(self):
+        interpretation = Graph_interpreter(self.graph.copy(), self.special_nodes, self.node_trajectory)
+        interpretation.events()
+        print('Trajectory count :' + str(len(interpretation.trajectories)))
+        for stat_func in self.stat_funcs:
+            if stat_func.conditions[0] == 1:
+                if stat_func.conditions[1] == 1:
+                    for trajecotry in tqdm(interpretation.trajectories, desc = 'Reeeeee evaluating!'):
+                        for i in range(len(trajecotry) - 1):
+                            pieces, edge = trajecotry.split(i)
+                            nx.set_edge_attributes(self.graph, {edge: stat_func([pieces[0]], [pieces[1]])}, 'likelihood')
+                elif stat_func.conditions[1] == 'n':
+                    for event in interpretation.Events:
+                        if len(event[1]) > 1:
+                            inn  = interpretation.trajectories[event[0][0]]
+                            outs = [interpretation.trajectories[j] for j in event[1]]
+                            edges = [(inn.nodes[-1], j.nodes[0]) for j in outs]
+                            likelihood = stat_func([inn], outs)
+                            nx.set_edge_attributes(self.graph, {edge: likelihood for edge in edges}, 'likelihood')
+                else:
+                    for event in interpretation.Events:
+                        if type(event[1]) == str:
+                            inn  = interpretation.trajectories[event[0][0]]
+                            edge = (inn.nodes[-1], event[1][0])
+                            likelihood = stat_func([inn], [])
+                            nx.set_edge_attributes(self.graph, {edge: likelihood}, 'likelihood')
+            elif stat_func.conditions[0] == 'n':
+                for event in interpretation.Events:
+                    if len(event[0]) > 1:
+                        ins  = [interpretation.trajectories[j] for j in event[0]]
+                        out = interpretation.trajectories[event[1][0]]
+                        edges = [(j.nodes[-1], out.nodes[0]) for j in ins]
+                        likelihood = stat_func(ins, [out])
+                        nx.set_edge_attributes(self.graph, {edge: likelihood for edge in edges}, 'likelihood')
+            else:
+                for event in interpretation.Events:
+                    if type(event[0]) == str:
+                        out  = interpretation.trajectories[event[1][0]]
+                        edge = (event[0][0], out.nodes[0])
+                        likelihood = stat_func([], [out])
+                        nx.set_edge_attributes(self.graph, {edge: likelihood}, 'likelihood')
 
     def _eradicate_unlikely_connections(self, quantile):
         likelihoods             = nx.get_edge_attributes(self.graph, 'likelihood')
@@ -128,21 +173,18 @@ class Tracer():
         if images is None: self.images = unzip_images('%s\\Compressed Data\\Shapes.zip'%self.path)
         else: self.images = images
         self.shape = self.images[0].shape
+        total_likelihood = self.get_total_log_likelihood()
 
         if sub_folder is None:  output_path = self.path + '/Tracer Output'
-        else:                   output_path = self.path + '/Tracer Output' + sub_folder
+        else:                   output_path = self.path + '/Tracer Output' + sub_folder + '_' + str(total_likelihood)
         try: os.makedirs(output_path)
         except: pass
 
-        def save_func(path, imgs):
-            try: os.makedirs(path)
-            except FileExistsError:
-                for old_img in glob.glob(path+'/**.jpg'): os.remove(old_img)
-            for i, x in tqdm(enumerate(imgs), desc = 'Saving: ' + path.split('/')[-1]): imageio.imwrite(path+'/%i.jpg'%i, x)
-
-        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph.gml', stringizer = lambda x: str(x))
+        def stringizer(value):
+            if type(value) == np.ndarray: return str(list(value))
+            else: return str(value)
+        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph_%i.gml'%total_likelihood, stringizer = stringizer)
         interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
-        self.trajectories = interpretation.trajectories
         interpretation.events()
         interpretation.families()
         Vis = Visualizer(self.images, interpretation)
@@ -151,14 +193,31 @@ class Tracer():
         except FileExistsError:
             try: os.remove(output_path + '/trajectories/events.csv')
             except: pass
-        try: os.makedirs(output_path + '/trajectories/Images')
-        except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/Images/**.jpg'))
+
+        #Trajectory visualization
+        path = output_path + '/trajectories/Images'
+        try: os.makedirs(path)
+        except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
+        Vis.ShowTrajectories(path)
+
+        #History visualization
+        path = output_path + '/tracedIDs'
+        try: os.makedirs(path)
+        except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
+        Vis.ShowHistory(path, memory, smallest_trajectories, 'ID')
+
+        #Family viusalization
+        path = output_path + '/family_ID_photos'
+        try: os.makedirs(path)
+        except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
+        Vis.ShowFamilies(path, 'ID')
+
+        #Trajectory csv output
         try: os.makedirs(output_path + '/trajectories/changes')
         except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/changes/**.csv'))
         try: os.makedirs(output_path + '/trajectories/data')
         except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/data/**.csv'))
 
-        save_func(output_path + '/trajectories/Images',      Vis.ShowTrajectories())
         cols = ['dt'] + ['d'+x for x in self.columns[2:]] + ['likelihoods']
         for i, track in enumerate(interpretation.trajectories):
             table = pd.DataFrame(data = track.data, columns = self.columns)
@@ -168,26 +227,35 @@ class Tracer():
             table.to_csv(output_path + '/trajectories/changes/changes_%i.csv'%i, index = False)
 
         with open(output_path + '/trajectories/events.csv', 'w') as file:
-            events_str = ''
-            for event in interpretation.Events: events_str += str(event) + '\n'
+            events_str = 'Type, In, Out, Frame, X, Y, likelihood\n'
+            for event in interpretation.Events:
+                if type(event[0][0]) is str:
+                    tr = interpretation.trajectories[event[1][0]].beginning
+                    tmp_str = str([0] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
+                elif type(event[1][0]) is str:
+                    tr = interpretation.trajectories[event[0][0]].ending
+                    tmp_str = str([1] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
+                elif len(event[0]) > 1:
+                    tr = interpretation.trajectories[event[1][0]].beginning
+                    tmp_str = str([2] + [str(event[0]).replace(',', ';')[1:-1]] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
+                elif len(event[1]) > 1:
+                    tr = interpretation.trajectories[event[0][0]].ending
+                    tmp_str = str([3] + event[0] + [str(event[1]).replace(',', ';')[1:-1]] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
+                events_str +=  tmp_str
             file.write(events_str)
 
+        #Family graph output
         try: os.mkdir(output_path + '/family_graphs')
         except FileExistsError: map(os.remove, glob.glob(output_path + '/family_graphs/**.gml'))
-        for i, family_graph in enumerate(interpretation.families):
-            nx.readwrite.gml.write_gml(self.graph, output_path + '/family_graphs/family_%i.gml'%i, stringizer = lambda x: str(x))
-
-        save_func(output_path + '/family_photos',       Vis.ShowFamilies('likelihood'))
-        save_func(output_path + '/family_ID_photos',    Vis.ShowFamilies('ID'))
-        save_func(output_path + '/tracedIDs',           Vis.ShowHistory(memory, smallest_trajectories, 'ID'))
-        save_func(output_path + '/traced_velocities',   Vis.ShowHistory(memory, smallest_trajectories, 'velocity'))
+        for i, family_graph in tqdm(enumerate(interpretation.families), desc = 'Writing family graphs: '):
+            nx.readwrite.gml.write_gml(family_graph, output_path + '/family_graphs/family_%i.gml'%i, stringizer = str)
 
         del Vis, self.images
 
 def unzip_images(path):
     imgFromZip  = lambda name: Image.open(io.BytesIO(zp.read(name)))
     with zipfile.ZipFile(path) as zp:
-        names = zp.namelist()
+        names = zp.namelist()#[0:2]
         try:    names.remove(*[x for x in names if len(x.split('/')[-1]) == 0 or x.split(',')[-1] == 'ini'])
         except: pass
         names.sort(key = lambda x: int(x.split('/')[-1].split('_')[-1].split('.')[0]))
