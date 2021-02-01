@@ -39,7 +39,7 @@ exitt   = exit_entry_func(A, Boundary, 1, 1)
 entry   = exit_entry_func(-A, Height - Boundary, 0, 1)
 
 Sig_displacement_movement_split_merge   = 20
-Weight_split_merge                      = 0.5
+Weight_split_merge                      = 0.7
 merge  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 0)
 split  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 1)
 
@@ -50,7 +50,7 @@ Radius_multlplyer   = 6
 Min_displacement    = 60
 asc_condition  = association_condition(Max_displ_per_frame, Radius_multlplyer, Min_displacement)
 
-Upsilon                 = 0.6
+Upsilon                 = 0.8
 Velocity_coefficient    = 100
 Max_acceleration        = 132
 comb_constr = combination_constraint(Upsilon, Velocity_coefficient, Max_acceleration)
@@ -65,7 +65,7 @@ bubble_trajectory.sig_Vel0 = Sig_Vel0
 bubble_trajectory.r_sig_Area0 = R_sig_Area0
 #%%
 Max_occlusion = 1
-Quantile = 0.1
+Quantile = 0.2
 #%%
 tracer = tTracer(aSSociator, stat_funcs, bubble_trajectory, Max_occlusion, Quantile, sub_dir)
 
