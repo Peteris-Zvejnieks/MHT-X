@@ -5,8 +5,10 @@ import numpy as np
 from scipy.stats import norm
 
 class particle_trajectory(node_trajectory_base):
-    mu_Vel0 = 0
-    sig_Vel0 = 100
+    mu_Vel0 = 9
+    sig_Vel0 = 5
+    vel_thresh = 3
+    sig_mul = 6
     def __init__(self, graph):
         super().__init__(graph)
         self._get_stats()
@@ -19,8 +21,11 @@ class particle_trajectory(node_trajectory_base):
 
     def _get_stats(self):
         if len(self) <= 2:
-            self.mu_Vel   = self.mu_Vel0
-            self.sig_Vel  = self.sig_Vel0
+            velocities = (self.params[:,0]**2 + self.params[:,1]**2)**0.5
+            velocities[velocities > self.vel_thresh] = self.mu_Vel0
+            self.mu_Vel   = np.average(velocities)
+            self.sig_Vel  = np.std(velocities)*self.sig_mul
+            if self.sig_Vel == 0: self.sig_Vel = self.sig_Vel0
         else:
             velocities   = np.linalg.norm(self.displacements, axis = 1)/self.changes[:,0]
             self.mu_Vel    = np.average(velocities)
@@ -33,7 +38,7 @@ class association_condition(Association_condition):
             if stop == start:                                                               return False
 
             dt = start.beginning[0] - stop.ending[0]
-            dr = np.linalg.norm(start.beginning[2:4] - stop.ending[2:4])
+            dr = np.linalg.norm(start.beginning[2:4] - (stop.ending[2:4]))
 
             if dt <= 0:                                                                      return False
             if dr > Soi * dt:                                                               return False

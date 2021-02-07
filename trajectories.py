@@ -14,7 +14,7 @@ class node_trajectory_base():
         self._get_acceleration()
         self._splinify()
 
-    def __repr__(self): return str(self.time)
+    def __repr__(self): return str(self.nodes)
     def __len__(self):  return len(self.nodes)
 
     def __call__(self, t):
