@@ -3,6 +3,7 @@ import networkx as nx
 import numpy as np
 
 class node_trajectory_base():
+    smoother = 100
     class ExtrapolationError(Exception): pass
 
     def __init__(self, graph):
@@ -60,7 +61,7 @@ class node_trajectory_base():
             if self.data.shape[0] <= 3: k = 1
             else:                       k = 3
             points = [self.positions[:,i] for i in range(self.positions.shape[1])]
-            self.tck, self.u = interp.splprep(points, u = self.time, k = k, s = 8e2)
+            self.tck, self.u = interp.splprep(points, u = self.time, k = k, s = self.smoother)
 
     def interpolate(self, t, der = 0): return np.array(interp.splev(t, self.tck, der = der))
 

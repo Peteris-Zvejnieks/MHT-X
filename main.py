@@ -30,7 +30,7 @@ del(I, J)
 #%%
 Sig_displacement_movement   = 6
 Sig_acceleration            = 8
-Velocity_scaler             = 6
+Velocity_scaler             = 8
 Weight_movement1            = 0.6
 Weight_movement2            = 0.5
 move = movement_func(Sig_displacement_movement, Sig_acceleration, Velocity_scaler, Weight_movement1, Weight_movement2)
@@ -43,8 +43,9 @@ entry   = exit_entry_func(-A, Width - Boundary, 0, 0)
 
 stat_funcs = [move, exitt, entry]
 #%%
-Soi = 14
-asc_condition  = association_condition(Soi)
+SoiMax = 5
+SoiVelScaler = 12
+asc_condition  = association_condition(SoiMax, SoiVelScaler)
 
 Velocity_scaler_constr  = 6
 Max_acceleration        = 6
@@ -53,14 +54,18 @@ comb_constr = combination_constraint(Velocity_scaler_constr, Max_acceleration)
 aSSociator = aAssociator(asc_condition, comb_constr, max_k = 1)
 #%%
 Mu_Vel0 = 9
-Sig_Vel0 = 5
-Vel_thresh = 3
-Sig_mul = 6
+Sig_Vel0 = 6
+Vel_thresh = 3.0
+Sig_mul = 10
+Smoother = 18
+Extrapolation_w = 1
 
+particle_trajectory.smoother = Smoother
 particle_trajectory.mu_Vel0 = Mu_Vel0
 particle_trajectory.sig_Vel0 = Sig_Vel0
 particle_trajectory.vel_thresh = Vel_thresh
 particle_trajectory.sig_mul = Sig_mul
+particle_trajectory.extrapolation_w = Extrapolation_w
 #%%
 Max_occlusion = 2
 Quantile = 0.1

@@ -175,35 +175,51 @@ class Visualizer():
                 for t in range(t0, min(len(images), t0 + memory)): images[t - 1] = self._draw_edge(images[t - 1], edge, color)
         for event in events:
             stops, starts, likelihood = event
-            if type(stops[0]) is str:
-                ID = starts[0]
-                if len(self.trajectories[ID]) < min_trajectory_size: continue
-                R, color = int(self.width * 2), (0,  0, 255)
-                t0 = int(self.trajectories[starts[0]].data[0, 0])
-                crd = self._get_node_crd(self.trajectories[ID].nodes[0])
-                f = lambda x: cv2.circle(x, crd, R, color, self.width)
+            if type(stops[0]) is str:  
+                if len(self.trajectories[(ID := starts[0])]) < min_trajectory_size: continue
+                t0 = int(self.trajectories[ID].data[0, 0])              
+                f = lambda x: self._draw_entry(x, ID)
+                
             elif type(starts[0]) is str:
-                ID = stops[0]
-                if len(self.trajectories[ID]) < min_trajectory_size: continue
-                R, color = int(self.width * 3), (0, 255, 0)
+                if len(self.trajectories[(ID := stops[0])]) < min_trajectory_size: continue
                 t0 = int(self.trajectories[ID].data[-1, 0])
-                crd = self._get_node_crd(self.trajectories[ID].nodes[-1])
-                f = lambda x: cv2.circle(x, crd, R, color, self.width)
+                f = lambda x: self._draw_exit(x, ID)
+                
             elif len(stops) > 1:
                 t0 = int(self.trajectories[starts[0]].data[0, 0])
                 f = lambda x: self._draw_merger(x, stops, starts[0])
+                
             elif len(starts) > 1:
                 t0 = int(min([self.trajectories[x].data[0,0] for x in starts]))
                 f = lambda x: self._draw_split(x, stops[0], starts)
+                
             for t in range(t0, min(len(images), t0 + memory)): images[t - 1] = f(images[t - 1])
         for i, x in enumerate(images): imageio.imwrite(path+'/%i.jpg'%i, x)
+
+    def _draw_entry(self, img, ID):
+        def square(img, crd, size, color, width):
+            x, y = crd
+            return cv2.rectangle(img, (x - size, y - size), (x + size, y + size), color,  width)
+        
+        crd = self._get_node_crd(self.trajectories[ID].nodes[0])
+        return square(img, crd, 1, (0,  0, 255), self.width)   
+        
+    def _draw_exit(self, img, ID):
+        def cross(img, crd, size, color, width):
+            x, y = crd
+            img = cv2.line(img, (x - size, y), (x + size, y), color,  width)
+            return cv2.line(img, (x, y - size), (x, y + size), color, width)
+        
+        crd = self._get_node_crd(self.trajectories[ID].nodes[-1])
+        return cross(img, crd, 1, (0, 255, 0), 1)
+
 
     def _draw_merger(self, img, starts, stop):
         color=  (255, 0, 0)
         crd2 = self._get_node_crd(self.trajectories[stop].nodes[0])
         for start in starts:
             crd1 = self._get_node_crd(self.trajectories[start].nodes[-1])
-            img = cv2.arrowedLine(img, crd1, crd2, color, self.width)
+            img = cv2.arrowedLine(img, crd1, crd2, color, 1)
         return img
 
     def _draw_split(self, img, start, stops):

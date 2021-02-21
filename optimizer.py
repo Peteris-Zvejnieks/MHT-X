@@ -40,6 +40,7 @@ class Optimizer():
             for j, i in enumerate(collection): X[i] = mem[0][j]
         #if (total_likelihood := np.prod(self.all_likelihoods[(X, self.pos)])) == 0: raise Optimizer.Likelihood0('No solution was found2', str(self.all_likelihoods[(X, self.pos)].flatten()))
         total_likelihood = np.prod(self.all_likelihoods[(X, self.pos)])
+        #if total_likelihood == 0: raise Optimizer.Likelihood0('\nCould not optimize :' + str(X) + '\n' + str(self.all_likelihoods[(X, self.pos)]) + '\n' + str(self.Ys))
         return [X, self.all_likelihoods[(X, self.pos)], total_likelihood]
 
     def _prep(self, associations):

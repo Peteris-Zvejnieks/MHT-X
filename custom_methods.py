@@ -9,6 +9,7 @@ class particle_trajectory(node_trajectory_base):
     sig_Vel0 = 5
     vel_thresh = 3
     sig_mul = 6
+    extrapolation_w = 0.5
     def __init__(self, graph):
         super().__init__(graph)
         self._get_stats()
@@ -17,12 +18,13 @@ class particle_trajectory(node_trajectory_base):
         time = self.time[-int(t > self.time[0])]
         a = 0.5
         dt = t - time
-        return self.interpolate(time) + self.interpolate(t - a * dt/abs(dt), 1) * dt
-
+        p1 = self.interpolate(time) + self.interpolate(time - a * dt/abs(dt), 1) * dt
+        p2 = self.interpolate(time) + [self.beginning, self.ending][-int(t > self.time[0])][2:4] * dt
+        return self.extrapolation_w * p1 + (1 - self.extrapolation_w) * p2
     def _get_stats(self):
         if len(self) <= 2:
             velocities = (self.params[:,0]**2 + self.params[:,1]**2)**0.5
-            velocities[velocities > self.vel_thresh] = self.mu_Vel0
+            velocities[velocities < self.vel_thresh] = self.mu_Vel0
             self.mu_Vel   = np.average(velocities)
             self.sig_Vel  = np.std(velocities)*self.sig_mul
             if self.sig_Vel == 0: self.sig_Vel = self.sig_Vel0
@@ -32,17 +34,48 @@ class particle_trajectory(node_trajectory_base):
             self.sig_Vel   = np.std(velocities)
 
 class association_condition(Association_condition):
-    def __init__(self, Soi = 45):
+    def __init__(self, SoiMax = 20, SoiVelScaler = 10):
 
         def f(stop, start):
-            if stop == start:                                                               return False
+            SOI_f = lambda v: SoiMax * np.exp(- np.linalg.norm(v)/SoiVelScaler)
 
-            dt = start.beginning[0] - stop.ending[0]
-            dr = np.linalg.norm(start.beginning[2:4] - (stop.ending[2:4]))
+            #identity check
+            if stop == start:                           return False
 
-            if dt <= 0:                                                                      return False
-            if dr > Soi * dt:                                                               return False
-            else:                                                                           return True
+            #Time forwards check
+            t1, t2 = stop.ending[0], start.beginning[0]
+            dt = t2 - t1
+            if dt <= 0:                                 return False
+
+            #SOI check
+            v1, v2 = stop.ending[4:6], start.beginning[4:6]
+
+            try:
+                p1 = stop(t1 + dt/2) + v1 * dt / 2
+                V1 = stop.interpolate(t1 - 0.5, 1)
+                R1 = SOI_f(V1 + v1)
+                try:
+                    p2 = start(t2 - dt/2) - v2 * dt / 2
+                    V2 = start.interpolate(t2 + 0.5, 1)
+                    R2 = SOI_f(V2 + v2)
+                except:
+                    p1 = stop(t1 + dt) + v1 * dt
+                    p2 = start.beginning[2:4]
+                    R2 = SOI_f(v2)
+            except:
+                p1 = stop.ending[2:4]
+                R1 = SOI_f(v1)
+                try:
+                    p2 = start(t2 - dt) - v2 * dt
+                    V2 = start.interpolate(t2 + 0.5, 1)
+                    R2 = SOI_f(V2 + v2)
+                except:
+                    p1 = stop.ending[2:4] + v1 * dt /2
+                    p2 = start.beginning[2:4] - v2 * dt / 2
+                    R2 = SOI_f(v2)
+
+            if np.linalg.norm(p2 - p1) <=  R1 + R2:     return True
+            else:                                       return False
 
         super().__init__(f)
 

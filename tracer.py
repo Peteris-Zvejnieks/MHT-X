@@ -189,12 +189,29 @@ class Tracer():
         def stringizer(value):
             if type(value) == np.ndarray: return str(list(value))
             else: return str(value)
-        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph_%i.gml'%total_likelihood, stringizer = stringizer)
+        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph_%s.gml'%total_likelihood, stringizer = stringizer)
 
         interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
         self.trajectories = interpretation.trajectories
         interpretation.events()
         Vis = Visualizer(self.images, interpretation)
+
+        try: os.mkdir(output_path + '/trajectories')
+        except FileExistsError:
+            try: os.remove(output_path + '/trajectories/events.csv')
+            except: pass
+
+        with open(output_path + '/trajectories/events.csv', 'w') as file:
+            events_str = 'Type, In, Out, Frame, X, Y, likelihood\n'
+            for event in tqdm(interpretation.Events, desc = 'Writing events: '):
+                if type(event[0][0]) is str:
+                    tr = interpretation.trajectories[event[1][0]].beginning
+                    tmp_str = str([0] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
+                elif type(event[1][0]) is str:
+                    tr = interpretation.trajectories[event[0][0]].ending
+                    tmp_str = str([1] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
+                events_str +=  tmp_str
+            file.write(events_str)
 
         try: os.mkdir(output_path + '/trajectories')
         except FileExistsError: pass
