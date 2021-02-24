@@ -40,7 +40,7 @@ entry   = exit_entry_func(-A, Height - Boundary, 0, 0)
 
 Sig_displacement_movement_split_merge   = 0.01
 Weight_split_merge                      = 0.5
-Power = 1
+Power = 2/3
 merge  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 0, Power)
 split  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 1, Power)
 
@@ -68,11 +68,11 @@ Quantile = 0.05
 #%%
 tracer = tTracer(aSSociator, stat_funcs, trajectory_stats, Max_occlusion, Quantile, sub_dir, dim = 3)
 #%%
-indx = 69
-string = '/'+'test_new_constr_%i_'%indx+str(Max_occlusion)
-#%%
-tracer.dump_data(string, 15, 1)
-#%%
 parameters = {name: eval(name) for name in dir() if name[0].isupper() and name != 'In' and name != 'Out'}
+for name, value in zip(parameters.keys(), parameters.values()):
+    print(name, ' :', value)
+print('Likelihood :', tracer.get_total_log_likelihood())
+string = '/search_'
+tracer.dump_data(string)
 import json
-with open(sub_dir + '/Tracer Output' + '/'+string + '/parameters.json', 'w') as fp: json.dump(parameters, fp)
+with open(sub_dir + '/Tracer Output' +string + '_' + str(tracer.get_total_log_likelihood()) + '/parameters.json', 'w') as fp: json.dump(parameters, fp)

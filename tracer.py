@@ -75,7 +75,12 @@ class Tracer():
                         any([self.data[x[1]][0] == time + 1 for x in edges]),
                         likelihood > self.decision_boundary]):
                     self.graph.add_edges_from(edges)
-
+                    
+    def get_total_log_likelihood(self):
+        likelihoods = nx.get_edge_attributes(self.graph, 'likelihood')
+        likelihoods = np.array(list(likelihoods.values()), dtype = np.longdouble )
+        return -np.sum(np.log10(likelihoods))
+    
     def _get_groups(self, start, stop):
         nodes1, nodes2 = [], []
         nodes1 = list(map(tuple, np.array(self.multi_indexed.loc[slice(start, stop - 1), :])))
@@ -126,13 +131,19 @@ class Tracer():
         self.position   = nx.get_node_attributes(self.graph, 'position')
         self.params     = nx.get_node_attributes(self.graph, 'params')
 
-    def dump_data(self, sub_folder = None, memory = 15, smallest_trajectories = 1):
+    def dump_data(self, sub_folder = None):
+        total_likelihood = self.get_total_log_likelihood()
+        
         if sub_folder is None:  output_path = self.path + '/Tracer Output'
-        else:                   output_path = self.path + '/Tracer Output' + sub_folder
+        else:                   output_path = self.path + '/Tracer Output' + sub_folder + '_' + str(total_likelihood)
         try: os.makedirs(output_path)
         except: pass
 
-        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph.gml', stringizer = lambda x: str(x))
+        def stringizer(value):
+            if type(value) == np.ndarray: return str(list(value))
+            else: return str(value)
+            
+        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph_%s.gml'%total_likelihood, stringizer = stringizer)
         interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
         interpretation.events()
         interpretation.families()
@@ -148,17 +159,18 @@ class Tracer():
         
 
         cols = ['dt'] + ['d'+x for x in self.columns[2:]] + ['likelihoods']
+        k = 100
         for i, track in tqdm(enumerate(interpretation.trajectories), desc = 'Saving trajectories: '):
 
             fig = plt.figure()
             ax = fig.gca(projection='3d')
-            X, Y, Z = track.positions[:,0], track.positions[:,1], track.positions[:,2]
+            X, Y, Z = track.positions[:,0] * k, track.positions[:,1] * k, track.positions[:,2] * k
             zeros = np.zeros_like(Z)
             ax.plot(X, Y, Z, label='parametric curve', marker='o', ms=1, mec = 'black')
             ax.plot(X, Y, zeros, label='parametric curve',  ms=1)
-            ax.plot(X, zeros + 0.03, Z, label='parametric curve',  ms=1)
+            ax.plot(X, zeros + 0.03 * k, Z, label='parametric curve',  ms=1)
             ax.plot(zeros, Y, Z, label='parametric curve',  ms=1)
-            ax.set(xlim = (0, 0.09), ylim = (0, 0.03), zlim=(0.015, 0.135))
+            ax.set(xlim = (0, 0.09 * k), ylim = (0, 0.03 * k), zlim=(0.015 * k, 0.135 * k))
             plt.tight_layout()
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
@@ -173,8 +185,15 @@ class Tracer():
             table.to_csv(output_path + '/trajectories/changes/changes_%i.csv'%i, index = False)
 
         with open(output_path + '/trajectories/events.csv', 'w') as file:
-            events_str = ''
-            for event in interpretation.Events: events_str += str(event) + '\n'
+            events_str = 'Type, In, Out, Frame, X, Y, likelihood\n'
+            for event in tqdm(interpretation.Events, desc = 'Writing events: '):
+                if type(event[0][0]) is str:
+                    tr = interpretation.trajectories[event[1][0]].beginning
+                    tmp_str = str([0] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
+                elif type(event[1][0]) is str:
+                    tr = interpretation.trajectories[event[0][0]].ending
+                    tmp_str = str([1] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
+                events_str +=  tmp_str
             file.write(events_str)
 
 class Fib:
