@@ -185,7 +185,7 @@ class Tracer():
             table.to_csv(output_path + '/trajectories/changes/changes_%i.csv'%i, index = False)
 
         with open(output_path + '/trajectories/events.csv', 'w') as file:
-            events_str = 'Type, In, Out, Frame, X, Y, likelihood\n'
+            events_str = 'Type,In,Out,Frame,X,Y,likelihood\n'
             for event in tqdm(interpretation.Events, desc = 'Writing events: '):
                 if type(event[0][0]) is str:
                     tr = interpretation.trajectories[event[1][0]].beginning
