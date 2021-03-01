@@ -227,43 +227,23 @@ class Tracer():
             table = pd.DataFrame(data = track.changes, columns = cols)
             table.to_csv(output_path + '/trajectories/changes/changes_%i.csv'%i, index = False)
 
-        with open(output_path + '/trajectories/events.csv', 'w') as file:
-            events_str = 'Type,Out,In,Frame,X,Y,AreOut,AreaIn,VelOut,VelIn,likelihood\n'
+ with open(output_path + '/trajectories/events.csv', 'w') as file:
+            events_str = 'Type,In,Out,Frame,X,Y,likelihood\n'
             for event in interpretation.Events:
                 if type(event[0][0]) is str:
                     tr = interpretation.trajectories[event[1][0]].beginning
-                    trajectory = interpretation.trajectories[event[1][0]]
-                    tmp_str = str([0] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) +
-                        [0, trajectory.mu_Area, [0,0], str(list(trajectory.interpolate(tr[0], 1))]).replace(',', ';') +
-                        [event[2]])[1:-1] + '\n'
-
+                    tmp_str = str([0] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
                 elif type(event[1][0]) is str:
                     tr = interpretation.trajectories[event[0][0]].ending
-                    trajectory = interpretation.trajectories[event[0][0]]
-                    tmp_str = str([1] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) +
-                        [trajectory.mu_Area, 0, str(list(trajectory.interpolate(tr[0], 1))).replace(',', ';'), [0,0]] +
-                        [event[2]])[1:-1] + '\n'
-
+                    tmp_str = str([1] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
                 elif len(event[0]) > 1:
                     tr = interpretation.trajectories[event[1][0]].beginning
-                    trajectory = interpretation.trajectories[event[1][0]]
-                    trajectories = [interpretation.trajectories[x] for x in event[0]]
-                    tmp_str = str([2] + [str(event[0]).replace(',', ';')[1:-1]] + event[1] + [tr[0]] + list(tr[2:4]) +
-                        [str([x.mu_Area for x in trajectories]).replace(',', ';')[1:-1], trajectory.mu_Area,
-                        str([list(x.interpolate(x.time[-1], 1)) for x in trajectories]).replace(',', ';')[1:-1], str(list(trajectory.interpolate(tr[0], 1))).replace(',', ';')] +
-                        [event[2]])[1:-1] + '\n'
-
+                    tmp_str = str([2] + [str(event[0]).replace(',', ';')[1:-1]] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
                 elif len(event[1]) > 1:
                     tr = interpretation.trajectories[event[0][0]].ending
-                    trajectory = interpretation.trajectories[event[0][0]]
-                    trajectories = [interpretation.trajectories[x] for x in event[1]]
-                    tmp_str = str([3] + event[0] + [str(event[1]).replace(',', ';')[1:-1]] + [tr[0]] + list(tr[2:4]) +
-                        [trajectory.mu_Area, str([x.mu_Area for x in trajectories]).replace(',', ';')[1:-1],
-                        str(list(trajectory.interpolate(tr[0], 1))).replace(',', ';')] + str([list(x.interpolate(x.time[0], 1)) for x in trajectories]).replace(',', ';')[1:-1]
-                        [event[2]])[1:-1] + '\n'
+                    tmp_str = str([3] + event[0] + [str(event[1]).replace(',', ';')[1:-1]] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
                 events_str +=  tmp_str
             file.write(events_str)
-
         #Family graph output
         try: os.mkdir(output_path + '/family_graphs')
         except FileExistsError: map(os.remove, glob.glob(output_path + '/family_graphs/**.gml'))
