@@ -227,9 +227,9 @@ class Tracer():
             table = pd.DataFrame(data = track.changes, columns = cols)
             table.to_csv(output_path + '/trajectories/changes/changes_%i.csv'%i, index = False)
 
- with open(output_path + '/trajectories/events.csv', 'w') as file:
-            events_str = 'Type,In,Out,Frame,X,Y,likelihood\n'
-            for event in interpretation.Events:
+        with open(output_path + '/trajectories/events.csv', 'w') as file:
+             events_str = 'Type,In,Out,Frame,X,Y,likelihood\n'
+             for event in interpretation.Events:
                 if type(event[0][0]) is str:
                     tr = interpretation.trajectories[event[1][0]].beginning
                     tmp_str = str([0] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
@@ -243,13 +243,13 @@ class Tracer():
                     tr = interpretation.trajectories[event[0][0]].ending
                     tmp_str = str([3] + event[0] + [str(event[1]).replace(',', ';')[1:-1]] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
                 events_str +=  tmp_str
-            file.write(events_str)
-        #Family graph output
+                file.write(events_str)
+            #Family graph output
         try: os.mkdir(output_path + '/family_graphs')
         except FileExistsError: map(os.remove, glob.glob(output_path + '/family_graphs/**.gml'))
         for i, family_graph in tqdm(enumerate(interpretation.families), desc = 'Writing family graphs: '):
             nx.readwrite.gml.write_gml(family_graph, output_path + '/family_graphs/family_%i.gml'%i, stringizer = str)
-
+    
         del Vis, self.images
 
 def unzip_images(path):
