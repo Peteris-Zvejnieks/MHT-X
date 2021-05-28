@@ -23,17 +23,17 @@ class bubble_trajectory(node_trajectory_base):
         if len(self) <= 2:
             self.mu_Vel   = self.mu_Vel0
             self.sig_Vel  = self.sig_Vel0
-            self.mu_Area = np.average(self.data[:,-2])
+            self.mu_Area = np.average(self.data[:,4])
             self.sig_Area = self.mu_Area * self.r_sig_Area0
-            self.mu_Volume  = np.average(self.data[:,-1])
+            self.mu_Volume  = np.average(self.data[:,5])
             self.sig_Volume = self.mu_Volume * self.r_sig_Volume0
         else:
             velocities   = np.linalg.norm(self.displacements, axis = 1)/self.changes[:,0]
             self.mu_Vel     = np.average(velocities)
             self.sig_Vel    = np.std(velocities)
-            self.mu_Area        = np.average((S := self.data[:,-2]))
+            self.mu_Area        = np.average((S := self.data[:,4]))
             self.sig_Area       = np.std(S)
-            self.mu_Volume    = np.average((V := self.data[:,-1]))
+            self.mu_Volume    = np.average((V := self.data[:,5]))
             self.sig_Volume   = np.std(V)
 
 class association_condition(Association_condition):

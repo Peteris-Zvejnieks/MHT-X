@@ -18,7 +18,7 @@ w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 26
+I = 43
 
 J = 0
 
@@ -40,8 +40,8 @@ Height              = images[0].shape[0]
 exitt   = exit_entry_func(A, Boundary, 1, 1)
 entry   = exit_entry_func(-A, Height - Boundary, 0, 1)
 
-Sig_displacement_movement_split_merge   = 150
-Weight_split_merge                      = 0.9
+Sig_displacement_movement_split_merge   = 80
+Weight_split_merge                      = 0.5
 Power = 3/2
 merge  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 0, Power)
 split  = split_merge_func(Sig_displacement_movement_split_merge, Weight_split_merge, 1, Power)
@@ -53,9 +53,9 @@ Radius_multlplyer   = 5
 Min_displacement    = 30
 asc_condition  = association_condition(Max_displ_per_frame, Radius_multlplyer, Min_displacement)
 
-Upsilon                 = 1.2
-Velocity_coefficient    = 80
-Max_acceleration        = 80
+Upsilon                 = 1
+Velocity_coefficient    = 60
+Max_acceleration        = 60
 comb_constr = combination_constraint(Upsilon, Velocity_coefficient, Max_acceleration)
 
 aSSociator = aAssociator(asc_condition, comb_constr)
