@@ -34,7 +34,7 @@ class particle_trajectory(node_trajectory_base):
             self.sig_Vel   = np.std(velocities)
 
 class association_condition(Association_condition):
-    def __init__(self, SoiMax = 20, SoiVelScaler = 10):
+    def __init__(self, SoiMax = 20, SoiVelScaler = 10, extrap_w = 0.5):
 
         def f(stop, start):
             SOI_f = lambda v: SoiMax * np.exp(- np.linalg.norm(v)/SoiVelScaler)
@@ -51,25 +51,28 @@ class association_condition(Association_condition):
             v1, v2 = stop.ending[4:6], start.beginning[4:6]
 
             try:
-                p1 = stop(t1 + dt/2) + v1 * dt / 2
                 V1 = stop.interpolate(t1 - 0.5, 1)
-                R1 = SOI_f(V1 + v1)
+                V1 = (extrap_w * V1 + (1 - extrap_w) * v1)
+                p1 = stop.ending[2:4] + V1 * dt / 2
+                R1 = SOI_f(V1)
                 try:
-                    p2 = start(t2 - dt/2) - v2 * dt / 2
                     V2 = start.interpolate(t2 + 0.5, 1)
-                    R2 = SOI_f(V2 + v2)
-                except:
-                    p1 = stop(t1 + dt) + v1 * dt
+                    V2 = (extrap_w * V2 + (1 - extrap_w) * v2)
+                    p2 = start.beginning[2:4] - V2 * dt / 2
+                    R2 = SOI_f(V2)
+                except node_trajectory_base.ExtrapolationError:
+                    p1 = stop.ending[2:4] + V1 * dt
                     p2 = start.beginning[2:4]
                     R2 = SOI_f(v2)
-            except:
+            except  node_trajectory_base.ExtrapolationError:
                 p1 = stop.ending[2:4]
                 R1 = SOI_f(v1)
                 try:
-                    p2 = start(t2 - dt) - v2 * dt
                     V2 = start.interpolate(t2 + 0.5, 1)
+                    V2 = (extrap_w * V2 + (1 - extrap_w) * v2)
+                    p2 = start.beginning[2:4] - V2 * dt
                     R2 = SOI_f(V2 + v2)
-                except:
+                except  node_trajectory_base.ExtrapolationError:
                     p1 = stop.ending[2:4] + v1 * dt /2
                     p2 = start.beginning[2:4] - v2 * dt / 2
                     R2 = SOI_f(v2)
@@ -106,8 +109,8 @@ class combination_constraint(Combination_constraint):
 class movement_func(statFunc):
     def __init__(self, sig_displacement, sig_acc, k_v, w1, w2):
         likelihood_displ = lambda dr, dt  : norm.pdf(dr, 0, sig_displacement * dt)/norm.pdf(0, 0, sig_displacement * dt)
-        likelihood_accel = lambda acc: norm.pds(acc, 0, sig_acceleration)/norm.pds(0, 0, sig_acceleration)
-        likelihood_angle = lambda v, phi: norm.pdf(phi, 0, np.pi * np.exp(-1/vk * np.linalg.norm(v1)))/norm.pdf(0, 0, np.pi * np.exp(-1/k_v * np.linalg.norm(v)))
+        likelihood_accel = lambda acc: norm.pdf(acc, 0, sig_acc)/norm.pdf(0, 0, sig_acc)
+        likelihood_angle = lambda v, phi: norm.pdf(phi, 0, np.pi * np.exp(-1/k_v * np.linalg.norm(v)))/norm.pdf(0, 0,  np.pi * np.exp(-1/k_v * np.linalg.norm(v)))
         def f(stop, start):
             stop, start = stop[0], start[0]
 
@@ -133,16 +136,19 @@ class movement_func(statFunc):
                     b = b1 * b2
                     c = c1 * c2
 
-                except:
+                except  node_trajectory_base.ExtrapolationError:
                     p1 = stop(t2)
                     p2 = start.positions[0,:]
                     c = c1**2
+                    b = b1**2
                 finally: a = likelihood_displ(np.linalg.norm(p2 - p1), dt)
 
-            except:
+            except  node_trajectory_base.ExtrapolationError:
                 p1 = stop.positions[-1,:]
                 try:
                     p2 = start(t1)
+                    v2 = start.velocities[0,:]
+                    dt2 = start.changes[0,0]
                     a = likelihood_displ(np.linalg.norm(p2 - p1), dt)
                     phi2 = np.arccos(np.dot(v2, vk)/(np.linalg.norm(v2)*np.linalg.norm(vk)))
                     acc_2= 2*(np.linalg.norm(v2-vk)/ (dt + dt2))
@@ -150,14 +156,14 @@ class movement_func(statFunc):
                     c2 = likelihood_accel(acc_2)
                     c = c2
                     b = b2**2
-                except:
+                except  node_trajectory_base.ExtrapolationError:
                     p2 = start.positions[0,:]
                     dr      = np.linalg.norm(p2 - p1)
                     mu_d    = (start.mu_Vel + stop.mu_Vel)/2 * dt
                     sigma_d = (start.sig_Vel + stop.sig_Vel)/2 * dt
                     a       = norm.pdf(dr, mu_d, sigma_d)/norm.pdf(mu_d, mu_d, sigma_d)
                     b, c = a**2, a**2
-            finally: return w1*a + (1-w1)*(w2 * b + (1-w2) * c)
+            return w1*a + (1-w1)*(w2 * b + (1-w2) * c)
 
         super().__init__(f, [1,1])
 
@@ -169,12 +175,12 @@ class exit_entry_func(statFunc):
                 trajectory, dt = start[0], -1
                 t = trajectory.beginning[0] + dt
                 try:    y = trajectory(t)[axis]
-                except: y = trajectory.positions[0, axis] + trajectory.mu_Vel * dt
+                except  node_trajectory_base.ExtrapolationError: y = trajectory.positions[0, axis] + trajectory.mu_Vel * dt
             else:
                 trajectory, dt = stop[0], 1
                 t = trajectory.ending[0] + dt
                 try:    y = trajectory(t)[axis]
-                except: y = trajectory.positions[-1, axis]  + trajectory.mu_Vel * dt
+                except  node_trajectory_base.ExtrapolationError: y = trajectory.positions[-1, axis]  + trajectory.mu_Vel * dt
             return f0(y)
 
         super().__init__(f, [1 - c, c])

@@ -17,7 +17,7 @@ w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 16
+I = 21
 
 J = 0
 
@@ -28,11 +28,11 @@ sub_dir = os.getcwd() + sub_dirs[J][1:]
 print(sub_dir)
 del(I, J)
 #%%
-Sig_displacement_movement   = 6
-Sig_acceleration            = 8
-Velocity_scaler             = 8
-Weight_movement1            = 0.6
-Weight_movement2            = 0.5
+Sig_displacement_movement   = 8
+Sig_acceleration            = 10
+Velocity_scaler             = 10
+Weight_movement1            = 0.9
+Weight_movement2            = 0.7
 move = movement_func(Sig_displacement_movement, Sig_acceleration, Velocity_scaler, Weight_movement1, Weight_movement2)
 
 A                   = 0.01
@@ -43,9 +43,10 @@ entry   = exit_entry_func(-A, Width - Boundary, 0, 0)
 
 stat_funcs = [move, exitt, entry]
 #%%
-SoiMax = 5
-SoiVelScaler = 12
-asc_condition  = association_condition(SoiMax, SoiVelScaler)
+SoiMax = 9 
+SoiVelScaler = 15
+Extrap_w = 0.7
+asc_condition  = association_condition(SoiMax, SoiVelScaler, Extrap_w)
 
 Velocity_scaler_constr  = 6
 Max_acceleration        = 6
@@ -53,8 +54,8 @@ comb_constr = combination_constraint(Velocity_scaler_constr, Max_acceleration)
 
 aSSociator = aAssociator(asc_condition, comb_constr, max_k = 1)
 #%%
-Mu_Vel0 = 9
-Sig_Vel0 = 6
+Mu_Vel0 = 10
+Sig_Vel0 = 3
 Vel_thresh = 3.0
 Sig_mul = 10
 Smoother = 18

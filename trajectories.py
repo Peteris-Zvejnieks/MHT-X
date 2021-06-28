@@ -63,7 +63,11 @@ class node_trajectory_base():
             points = [self.positions[:,i] for i in range(self.positions.shape[1])]
             self.tck, self.u = interp.splprep(points, u = self.time, k = k, s = self.smoother)
 
-    def interpolate(self, t, der = 0): return np.array(interp.splev(t, self.tck, der = der))
+    def interpolate(self, t, der = 0): 
+        try:
+            return np.array(interp.splev(t, self.tck, der = der))
+        except AttributeError:
+            raise node_trajectory_base.ExtrapolationError('cant interpolate')
 
     def split(self, i):
         if i > len(self) - 2: raise IndexError

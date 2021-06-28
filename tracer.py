@@ -65,7 +65,7 @@ class Tracer():
                         try: child = group2[child].nodes[0]
                         except: p2, t2 = np.zeros(2), 1e48
                         else: p2, t2 = np.array(self.data[child][2:4]), self.data[child][0]
-                        v = np.dot(p1, p2) / (t2-t1)
+                        v = (p2 - p1)/(t2-t1)
                         edges.append((parent, child, {'likelihood': likelihood, 'velocity' : v}))
 
                 if any([any([self.data[x[0]][0] == time     for x in edges]),
@@ -220,7 +220,7 @@ class Tracer():
         path = output_path + '/trajectories/Images'
         try: os.makedirs(path)
         except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
-        Vis.ShowTrajectories(path)
+        Vis.ShowTrajectories(path, 'likelihood')
 
         #History visualization
         path = output_path + '/tracedIDs'
