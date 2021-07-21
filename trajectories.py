@@ -51,8 +51,11 @@ class node_trajectory_base():
         self.acceleration = np.zeros((max(len(self) - 2, 1), 2))
         if len(self) > 2:
             norms = np.linalg.norm(self.displacements, axis = 1)
+            norm_mul = norms[1:] * norms[:-1]
+            loc = np.nonzero(norm_mul)
             dot_products = np.array(list(map(lambda x: np.dot(x[0], x[1]), zip(self.displacements[1:,:], self.displacements[:-1,:]))))
-            self.acceleration[:,0] = np.arccos(dot_products/(norms[1:] * norms[:-1]))/self.changes[1:,0]
+            self.acceleration = np.zeros([norm_mul.size, 2])
+            self.acceleration[loc, 0] = np.arccos(dot_products[loc]/norm_mul[loc])/self.changes[1:,0][loc]
             self.acceleration[:,1] = (norms[1:] - norms[:-1])/self.changes[1:,0]
 
     def _splinify(self):

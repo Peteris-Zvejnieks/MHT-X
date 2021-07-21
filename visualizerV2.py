@@ -15,7 +15,7 @@ class discrete_colormap():
     def __call__(self, n): return colorsys.hsv_to_rgb(self.hue(n), self.sat(), self.val())
 
 class Colorbar_overlay():
-    def __init__(self, cmap, shape, /, relative_size = [0.15, 0.02], relative_pos = [0.6, 0.05]):
+    def __init__(self, cmap, shape, /, relative_size = [0.5, 0.02], relative_pos = [0.3, 0.05]):
         relative_size, relative_pos, shapeXY  = np.array(relative_size), np.array(relative_pos), np.array(shape[:-1])
         self.cb_shape = (shapeXY * relative_size).astype(np.int)
         self.pos = (shapeXY * relative_pos).astype(np.int)
@@ -27,8 +27,8 @@ class Colorbar_overlay():
 
     def __call__(self, min_max):
         overlay = copy.deepcopy(self.overlay)
-        overlay = cv2.putText(overlay, "{:.1e}".format(min_max[0]), (self.pos[1], self.pos[0] + self.cb_shape[0] + 30),    cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
-        overlay = cv2.putText(overlay, "{:.1e}".format(min_max[1]), (self.pos[1], self.pos[0] - 10),                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
+        overlay = cv2.putText(overlay, "{:.2f}".format(min_max[0]), (self.pos[1], self.pos[0] + self.cb_shape[0] + 30),    cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
+        overlay = cv2.putText(overlay, "{:.2f}".format(min_max[1]), (self.pos[1], self.pos[0] - 10),                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255))
         return overlay
 
 class Graph_interpreter():
@@ -76,16 +76,18 @@ class Graph_interpreter():
         self.families.sort(key = lambda graph: -len(list(graph.nodes)))
 
 class Visualizer():
-    def __init__(self, images, interpretation, /, width = 2):
-        self.images = images
-        self.shape  = images[0].shape
+    def __init__(self, images, interpretation, /, width = 2, upscale = 1):
+        self.shape = tuple(map(lambda x: int(x*upscale), images[0].shape[:-1])) + (3,)
+        self.upscale = upscale
+        if upscale != 1: self.images = list(map(lambda img: cv2.resize(img, (self.shape[1],self.shape[0]), interpolation = cv2.INTER_CUBIC), images))
+        else: self.images = images
         self.interpretation = interpretation
         self.trajectories = self.interpretation.trajectories
         self.special_nodes = interpretation.special_nodes
-        self.width = 2
+        self.width = width
         self.data = nx.get_node_attributes(self.interpretation.graph, 'data')
 
-    def _get_node_crd(self, node):  return (int(self.data[node][2]), self.shape[0] - int(self.data[node][3]))
+    def _get_node_crd(self, node):  return (int(self.data[node][2] * self.upscale), self.shape[0] - int(self.data[node][3] * self.upscale))
     def _map_color(self, color):    return tuple(map(lambda x: 255*x, color))[:3]
     def _normalizer(self, value, min_max):
         num = value - min_max[0]
@@ -157,7 +159,7 @@ class Visualizer():
             if key != 'ID':
                 color_bar = color_bar_gen(min_max)
                 family_photo = np.where(color_bar != 0, color_bar, family_photo)
-            imageio.imwrite(path+'/%i.jpg'%i, family_photo)
+            imageio.imwrite(path+'/%i.png'%i, family_photo)
 
     def ShowHistory(self, path, memory = 15, min_trajectory_size = 1, key = 'velocity'):
         events = self.interpretation.Events
@@ -194,7 +196,7 @@ class Visualizer():
                 f = lambda x: self._draw_split(x, stops[0], starts)
                 
             for t in range(t0, min(len(images), t0 + memory)): images[t - 1] = f(images[t - 1])
-        for i, x in enumerate(images): imageio.imwrite(path+'/%i.jpg'%i, x)
+        for i, x in enumerate(images): imageio.imwrite(path+'/%i.png'%i, x)
 
     def _draw_entry(self, img, ID):
         def square(img, crd, size, color, width):
@@ -211,7 +213,7 @@ class Visualizer():
             return cv2.line(img, (x, y - size), (x, y + size), color, width)
         
         crd = self._get_node_crd(self.trajectories[ID].nodes[-1])
-        return cross(img, crd, 1, (0, 255, 0), 1)
+        return cross(img, crd, self.width, (0, 255, 0), int(self.width/2))
 
 
     def _draw_merger(self, img, starts, stop):
@@ -243,4 +245,4 @@ class Visualizer():
             color_bar = color_bar_gen(min_max)
             img = np.where(color_bar != 0, color_bar, img)
             img = img.astype(np.uint8)
-            imageio.imwrite(path+'/%i.jpg'%i, img)
+            imageio.imwrite(path+'/%i.png'%i, img)

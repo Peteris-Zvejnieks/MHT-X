@@ -194,7 +194,7 @@ class Tracer():
         interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
         self.trajectories = interpretation.trajectories
         interpretation.events()
-        Vis = Visualizer(self.images, interpretation)
+        Vis = Visualizer(self.images, interpretation, upscale = 2)
 
         try: os.mkdir(output_path + '/trajectories')
         except FileExistsError:

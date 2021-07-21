@@ -84,7 +84,11 @@ class association_condition(Association_condition):
 
 class combination_constraint(Combination_constraint):
     def __init__(self, v_scaler, max_a):
-        d_fi = lambda u, v: np.arccos(np.dot(u, v)/(np.linalg.norm(u)*np.linalg.norm(v)))
+        
+        def d_fi(u, v):
+            a = np.arccos(np.dot(u, v)/(np.linalg.norm(u)*np.linalg.norm(v)))
+            if a != a: return 0
+            else: return a
         def f(stops, starts):
             #If new or gone - defaults to True
             if len(stops) == 0 or len(starts) == 0: return True
@@ -111,6 +115,10 @@ class movement_func(statFunc):
         likelihood_displ = lambda dr, dt  : norm.pdf(dr, 0, sig_displacement * dt)/norm.pdf(0, 0, sig_displacement * dt)
         likelihood_accel = lambda acc: norm.pdf(acc, 0, sig_acc)/norm.pdf(0, 0, sig_acc)
         likelihood_angle = lambda v, phi: norm.pdf(phi, 0, np.pi * np.exp(-1/k_v * np.linalg.norm(v)))/norm.pdf(0, 0,  np.pi * np.exp(-1/k_v * np.linalg.norm(v)))
+        def d_fi(u, v):
+            a = np.arccos(np.dot(u, v)/(np.linalg.norm(u)*np.linalg.norm(v)))
+            if a != a: return 0
+            else: return a
         def f(stop, start):
             stop, start = stop[0], start[0]
 
@@ -121,7 +129,7 @@ class movement_func(statFunc):
                 p1 = stop(t1 + dt/2)
                 v1 = stop.velocities[-1,:]
                 dt1 = stop.changes[-1,0]
-                phi1 = np.arccos(np.dot(v1, vk)/(np.linalg.norm(v1)*np.linalg.norm(vk)))
+                phi1 = d_fi(v1, vk)
                 acc_1= 2*(np.linalg.norm(vk-v1)/ (dt + dt1))
                 b1 = likelihood_angle(v1, phi1)
                 c1 = likelihood_accel(acc_1)
@@ -129,7 +137,7 @@ class movement_func(statFunc):
                     p2 = start(t2 - dt/2)
                     v2 = start.velocities[0,:]
                     dt2 = start.changes[0,0]
-                    phi2 = np.arccos(np.dot(v2, vk)/(np.linalg.norm(v2)*np.linalg.norm(vk)))
+                    phi2 = d_fi(v2, vk)
                     acc_2= 2*(np.linalg.norm(v2-vk)/ (dt + dt2))
                     b2 = likelihood_angle(vk, phi2)
                     c2 = likelihood_accel(acc_2)
@@ -150,7 +158,7 @@ class movement_func(statFunc):
                     v2 = start.velocities[0,:]
                     dt2 = start.changes[0,0]
                     a = likelihood_displ(np.linalg.norm(p2 - p1), dt)
-                    phi2 = np.arccos(np.dot(v2, vk)/(np.linalg.norm(v2)*np.linalg.norm(vk)))
+                    phi2 = d_fi(v2, vk)
                     acc_2= 2*(np.linalg.norm(v2-vk)/ (dt + dt2))
                     b2 = likelihood_angle(vk, phi2)
                     c2 = likelihood_accel(acc_2)

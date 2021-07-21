@@ -17,7 +17,7 @@ w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
 os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 21
+I = 22
 
 J = 0
 
@@ -29,8 +29,8 @@ print(sub_dir)
 del(I, J)
 #%%
 Sig_displacement_movement   = 8
-Sig_acceleration            = 10
-Velocity_scaler             = 10
+Sig_acceleration            = 15
+Velocity_scaler             = 15
 Weight_movement1            = 0.9
 Weight_movement2            = 0.7
 move = movement_func(Sig_displacement_movement, Sig_acceleration, Velocity_scaler, Weight_movement1, Weight_movement2)
@@ -43,9 +43,10 @@ entry   = exit_entry_func(-A, Width - Boundary, 0, 0)
 
 stat_funcs = [move, exitt, entry]
 #%%
-SoiMax = 9 
-SoiVelScaler = 15
-Extrap_w = 0.7
+SoiMax = 8
+SoiVelScaler = 50
+Extrap_w = 1
+
 asc_condition  = association_condition(SoiMax, SoiVelScaler, Extrap_w)
 
 Velocity_scaler_constr  = 6
