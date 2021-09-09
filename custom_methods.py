@@ -19,8 +19,9 @@ class particle_trajectory(node_trajectory_base):
         a = 0.5
         dt = t - time
         p1 = self.interpolate(time) + self.interpolate(time - a * dt/abs(dt), 1) * dt
-        p2 = self.interpolate(time) + [self.beginning, self.ending][-int(t > self.time[0])][2:4] * dt
+        p2 = self.interpolate(time) + [self.beginning, self.ending][-int(t > self.time[0])][4:6] * dt
         return self.extrapolation_w * p1 + (1 - self.extrapolation_w) * p2
+    
     def _get_stats(self):
         if len(self) <= 2:
             velocities = (self.params[:,0]**2 + self.params[:,1]**2)**0.5

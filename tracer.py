@@ -175,8 +175,12 @@ class Tracer():
         self.shape = self.images[0].shape
         total_likelihood = self.get_total_log_likelihood()
 
+        interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
+        self.trajectories = interpretation.trajectories
+        interpretation.events()
+
         if sub_folder is None:  output_path = self.path + '/Tracer Output'
-        else:                   output_path = self.path + '/Tracer Output' + sub_folder + '_' + str(total_likelihood)
+        else:                   output_path = self.path + '/Tracer Output' + sub_folder + str(len(self.trajectories))+'_' + str(total_likelihood)
         try: os.makedirs(output_path)
         except: pass
 
@@ -191,9 +195,7 @@ class Tracer():
             else: return str(value)
         nx.readwrite.gml.write_gml(self.graph, output_path + '/graph_%s.gml'%total_likelihood, stringizer = stringizer)
 
-        interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
-        self.trajectories = interpretation.trajectories
-        interpretation.events()
+
         Vis = Visualizer(self.images, interpretation, upscale = 2)
 
         try: os.mkdir(output_path + '/trajectories')

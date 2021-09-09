@@ -236,6 +236,7 @@ class Visualizer():
         cmap = cm.plasma
         color_bar_gen = Colorbar_overlay(cmap, self.shape)
         for i, tr in tqdm(enumerate(self.trajectories), desc = 'Drawing trajectories '):
+            if len(tr) == 1: continue
             img = np.zeros(self.shape, dtype=np.uint8)
             values = nx.get_edge_attributes(tr.backbone, key)
             min_max = [min(tuple(values.values()) + (1e3,)), max(tuple(values.values()) + (0,))]
