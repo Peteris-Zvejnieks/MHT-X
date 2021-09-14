@@ -16,10 +16,11 @@ class particle_trajectory(node_trajectory_base):
 
     def extrapolate(self, t):
         time = self.time[-int(t > self.time[0])]
+        endpoint = self.positions[-int(t > self.time[0])]
         a = 0.5
-        dt = t - time
-        p1 = self.interpolate(time) + self.interpolate(time - a * dt/abs(dt), 1) * dt
-        p2 = self.interpolate(time) + [self.beginning, self.ending][-int(t > self.time[0])][4:6] * dt
+        dt = t - time        
+        p2 = endpoint + [self.beginning, self.ending][-int(t > self.time[0])][4:6] * dt
+        p1 = endpoint + self.interpolate(time - a * dt/abs(dt), 1) * dt
         return self.extrapolation_w * p1 + (1 - self.extrapolation_w) * p2
     
     def _get_stats(self):
@@ -123,12 +124,12 @@ class movement_func(statFunc):
         def f(stop, start):
             stop, start = stop[0], start[0]
 
-            t1  , t2    = stop.ending[0], start.beginning[0]
-            dt = t2 - t1
-            vk = (start.positions[0,:] - stop.positions[-1,:])/dt
+            t1, t2  = stop.ending[0], start.beginning[0]
+            dt      = t2 - t1
+            vk      = (start.positions[0] - stop.positions[-1])/dt
             try:
                 p1 = stop(t1 + dt/2)
-                v1 = stop.velocities[-1,:]
+                v1 = stop.velocities[-1]
                 dt1 = stop.changes[-1,0]
                 phi1 = d_fi(v1, vk)
                 acc_1= 2*(np.linalg.norm(vk-v1)/ (dt + dt1))
@@ -145,16 +146,16 @@ class movement_func(statFunc):
                     b = b1 * b2
                     c = c1 * c2
 
-                except  node_trajectory_base.ExtrapolationError:
+                except node_trajectory_base.ExtrapolationError:
                     p1 = stop(t2)
                     p2 = start.positions[0,:]
                     c = c1**2
                     b = b1**2
                 finally: a = likelihood_displ(np.linalg.norm(p2 - p1), dt)
 
-            except  node_trajectory_base.ExtrapolationError:
-                p1 = stop.positions[-1,:]
+            except node_trajectory_base.ExtrapolationError:
                 try:
+                    p1 = stop.positions[-1]
                     p2 = start(t1)
                     v2 = start.velocities[0,:]
                     dt2 = start.changes[0,0]
@@ -165,12 +166,11 @@ class movement_func(statFunc):
                     c2 = likelihood_accel(acc_2)
                     c = c2
                     b = b2**2
-                except  node_trajectory_base.ExtrapolationError:
-                    p2 = start.positions[0,:]
-                    dr      = np.linalg.norm(p2 - p1)
-                    mu_d    = (start.mu_Vel + stop.mu_Vel)/2 * dt
-                    sigma_d = (start.sig_Vel + stop.sig_Vel)/2 * dt
-                    a       = norm.pdf(dr, mu_d, sigma_d)/norm.pdf(mu_d, mu_d, sigma_d)
+                except node_trajectory_base.ExtrapolationError:
+                    v1, v2 = stop.ending[4:6], start.beginning[4:6]
+                    p1 = stop.positions[-1] + v1*dt/2
+                    p2 = start.positions[0] - v2*dt/2
+                    a = likelihood_displ(np.linalg.norm(p2 - p1), dt)
                     b, c = a**2, a**2
             return w1*a + (1-w1)*(w2 * b + (1-w2) * c)
 

@@ -30,8 +30,8 @@ del(I, J)
 Sig_displacement_movement   = 8
 Sig_acceleration            = 15
 Velocity_scaler             = 15
-Weight_movement1            = 0.6 
-Weight_movement2            = 0.5
+Weight_movement1            = 0.9 
+Weight_movement2            = 0.1
 move = movement_func(Sig_displacement_movement, Sig_acceleration, Velocity_scaler, Weight_movement1, Weight_movement2)
 
 A                   = 0.01
@@ -42,14 +42,14 @@ entry   = exit_entry_func(-A, Width - Boundary, 0, 0)
 
 stat_funcs = [move, exitt, entry]
 #%%
-SoiMax = 9
-SoiVelScaler = 100
-Extrap_w = 0.6
+SoiMax = 8
+SoiVelScaler = 200
+Extrap_w = 0.1
 
 asc_condition  = association_condition(SoiMax, SoiVelScaler, Extrap_w)
 
-Velocity_scaler_constr  = SoiVelScaler
-Max_acceleration        = 4
+Velocity_scaler_constr  = 200
+Max_acceleration        = 6
 comb_constr = combination_constraint(Velocity_scaler_constr, Max_acceleration)
 
 aSSociator = aAssociator(asc_condition, comb_constr, max_k = 1)
@@ -58,7 +58,7 @@ Mu_Vel0 = 10
 Sig_Vel0 = 3
 Vel_thresh = 0
 Sig_mul = 10
-Smoother = 5
+Smoother = 30
 Extrapolation_w = Extrap_w
 
 particle_trajectory.smoother = Smoother
@@ -71,11 +71,10 @@ particle_trajectory.extrapolation_w = Extrapolation_w
 Max_occlusion = 2
 Quantile = 0.1
 #%%
+parameters = {name: eval(name) for name in dir() if name[0].isupper() and name != 'In' and name != 'Out'}
+for name, value in zip(parameters.keys(), parameters.values()): print(name, ' :', value)
 tracer = tTracer(aSSociator, stat_funcs, particle_trajectory, Max_occlusion, Quantile, sub_dir)
 #%%
-parameters = {name: eval(name) for name in dir() if name[0].isupper() and name != 'In' and name != 'Out'}
-for name, value in zip(parameters.keys(), parameters.values()):
-    print(name, ' :', value)
 print('Likelihood :', tracer.get_total_log_likelihood())
 string = '/search_'
 tracer.dump_data(string, memory = 15, smallest_trajectories = 5)
