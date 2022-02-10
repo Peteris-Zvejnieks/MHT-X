@@ -12,12 +12,13 @@ import os
 plt.rcParams['figure.dpi'] = 500
 np.set_printoptions(suppress=True)
 #%%
-drive = 'C:\\'
-w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
+# drive = 'C:\\'
+# w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
+w_dir = r'C:\Users\User\Documents\Zvejnieks\ParticleProcessing\Particles\for_tracing'
 os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 23
+I = 5
 J = 0
 
 sub_dirs = glob.glob(main_dirs[I] + '/*')
@@ -29,22 +30,22 @@ del(I, J)
 #%%
 Sig_displacement_movement   = 8
 Sig_acceleration            = 15
-Velocity_scaler             = 15
-Weight_movement1            = 0.9 
-Weight_movement2            = 0.1
+Velocity_scaler             = 50
+Weight_movement1            = 0.7
+Weight_movement2            = 0.2
 move = movement_func(Sig_displacement_movement, Sig_acceleration, Velocity_scaler, Weight_movement1, Weight_movement2)
 
 A                   = 0.01
 Boundary            = 7
-Width               = 408
+Width               = 424
 exitt   = exit_entry_func(A, Boundary, 1, 0)
 entry   = exit_entry_func(-A, Width - Boundary, 0, 0)
 
 stat_funcs = [move, exitt, entry]
 #%%
-SoiMax = 8
+SoiMax = 7
 SoiVelScaler = 200
-Extrap_w = 0.1
+Extrap_w = 0.3
 
 asc_condition  = association_condition(SoiMax, SoiVelScaler, Extrap_w)
 
@@ -69,7 +70,7 @@ particle_trajectory.sig_mul = Sig_mul
 particle_trajectory.extrapolation_w = Extrapolation_w
 #%%
 Max_occlusion = 2
-Quantile = 0.1
+Quantile = 0.5
 #%%
 parameters = {name: eval(name) for name in dir() if name[0].isupper() and name != 'In' and name != 'Out'}
 for name, value in zip(parameters.keys(), parameters.values()): print(name, ' :', value)
