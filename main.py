@@ -28,39 +28,50 @@ sub_dir = os.getcwd() + sub_dirs[J][1:]
 print(sub_dir)
 del(I, J)
 #%%
-Sig_displacement_movement   = 8
-Sig_acceleration            = 15
-Velocity_scaler             = 50
-Weight_movement1            = 0.7
-Weight_movement2            = 0.2
+### Particle tracking 
+## eqs 9 - 12
+Sig_displacement_movement   = 8 # sigma_pos
+Sig_acceleration            = 15 # simga_a
+Velocity_scaler             = 50 # lambda
+Weight_movement1            = 0.7 # beta_1
+Weight_movement2            = 0.2 # beta_2
 move = movement_func(Sig_displacement_movement, Sig_acceleration, Velocity_scaler, Weight_movement1, Weight_movement2)
 
-A                   = 0.01
-Boundary            = 7
-Width               = 424
+### MHT-X tracking 
+## eq 21
+A                   = 0.01 # a
+Boundary            = 7 # not in definition
+Width               = 424 # not stricly in definition
+# Boundary and Width make up b
 exitt   = exit_entry_func(A, Boundary, 1, 0)
 entry   = exit_entry_func(-A, Width - Boundary, 0, 0)
 
 stat_funcs = [move, exitt, entry]
 #%%
-SoiMax = 7
-SoiVelScaler = 200
-Extrap_w = 0.3
+### Particle tracking 
+## eq 8
+SoiMax = 7              # R_max
+SoiVelScaler = 200      # lambda
+Extrap_w = 0.3          # alpha
 
 asc_condition  = association_condition(SoiMax, SoiVelScaler, Extrap_w)
 
-Velocity_scaler_constr  = 200
-Max_acceleration        = 6
+### MHT-X 
+## eq 11
+Velocity_scaler_constr  = 200 # a_c
+## eq 12
+Max_acceleration        = 6 # lambda
 comb_constr = combination_constraint(Velocity_scaler_constr, Max_acceleration)
 
 aSSociator = aAssociator(asc_condition, comb_constr, max_k = 1)
 #%%
-Mu_Vel0 = 10
-Sig_Vel0 = 3
-Vel_thresh = 0
-Sig_mul = 10
-Smoother = 30
-Extrapolation_w = Extrap_w
+# Just some default values for when no information is not available and such
+Mu_Vel0 = 10  # default absolute velocity
+Sig_Vel0 = 3 # default absolute velocity variance
+Vel_thresh = 0 # if velocity lower than this, replace it with default
+Sig_mul = 10 # multiplyer for sigma
+Smoother = 30 # a parameter for splines, a smoothing constant
+Extrapolation_w = Extrap_w 
 
 particle_trajectory.smoother = Smoother
 particle_trajectory.mu_Vel0 = Mu_Vel0
