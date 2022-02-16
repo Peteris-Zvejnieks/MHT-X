@@ -7,7 +7,7 @@ from scipy.stats import norm
 class particle_trajectory(node_trajectory_base):
     mu_Vel0 = 9
     sig_Vel0 = 5
-    vel_thresh = 3
+    vel_thresh = 0
     sig_mul = 6
     extrapolation_w = 0.5
     def __init__(self, graph):
