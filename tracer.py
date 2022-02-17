@@ -4,6 +4,7 @@ from PIL import Image
 from tqdm import tqdm
 import networkx as nx
 import pandas as pd
+import pickle as pc
 import numpy as np
 import imageio
 import zipfile
@@ -21,7 +22,7 @@ class Tracer():
                  path,
                  dim = 2):
 
-        self.dataset            = np.array((dataset := pd.read_excel('%s\\dataset.xlsx'%path, engine='openpyxl')))
+        self.dataset            = np.array((dataset := pd.read_csv('%s\\dataset.csv'%path)))
         self.columns            = dataset.columns
         index                   = pd.MultiIndex.from_tuples(list(map(tuple, np.array(self.dataset, dtype = np.uint16)[:,:2])))
         self.multi_indexed      = pd.DataFrame(self.dataset[:,:2].astype(np.uint16), index = index)
@@ -219,29 +220,31 @@ class Tracer():
         except FileExistsError: pass
 
         #Trajectory visualization
-        path = output_path + '/trajectories/Images'
-        try: os.makedirs(path)
-        except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
-        Vis.ShowTrajectories(path, 'likelihood')
+        # path = output_path + '/trajectories/Images'
+        # try: os.makedirs(path)
+        # except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
+        # Vis.ShowTrajectories(path, 'likelihood')
 
         #History visualization
         path = output_path + '/tracedIDs'
         try: os.makedirs(path)
         except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
         Vis.ShowHistory(path, memory, smallest_trajectories, 'ID')
-
-        #Trajectory csv output
-        try: os.makedirs(output_path + '/trajectories/changes')
-        except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/changes/**.csv'))
-        try: os.makedirs(output_path + '/trajectories/data')
-        except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/data/**.csv'))
+        
+        #Tajectory piclke output
         cols = ['dt'] + ['d'+x for x in self.columns[2:]] + ['likelihoods']
-        for i, track in enumerate(interpretation.trajectories):
-            table = pd.DataFrame(data = track.data, columns = self.columns)
-            table.to_csv(output_path + '/trajectories/data/data_%i.csv'%i, index = False)
+        trajectories = [self.columns]
+        changes = [cols]
+        for track in tqdm(interpretation.trajectories, desc = 'Pickling'):
+            trajectories.append(track.data)
+            changes.append(track.changes)
+            
+        with open(output_path + '/trajectories/trajectories.pkl', 'wb') as f:
+            pc.dump(trajectories, f, pc.HIGHEST_PROTOCOL)
+            
+        with open(output_path + '/trajectories/changes.pkl', 'wb') as f:
+            pc.dump(changes, f, pc.HIGHEST_PROTOCOL)
 
-            table = pd.DataFrame(data = track.changes, columns = cols)
-            table.to_csv(output_path + '/trajectories/changes/changes_%i.csv'%i, index = False)
         del Vis, self.images
 
 def unzip_images(path):
