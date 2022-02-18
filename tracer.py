@@ -1,4 +1,5 @@
 from visualizerV2 import Visualizer, Graph_interpreter
+import wolframclient.serializers as wxf
 from optimizer import Optimizer
 from PIL import Image
 from tqdm import tqdm
@@ -241,12 +242,16 @@ class Tracer():
             
         with open(output_path + '/trajectories/trajectories.pkl', 'wb') as f:
             pc.dump(trajectories, f, pc.HIGHEST_PROTOCOL)
+        wxf.export(trajectories, output_path + '/trajectories/trajectories.wxf', target_format='wxf')
             
         with open(output_path + '/trajectories/changes.pkl', 'wb') as f:
             pc.dump(changes, f, pc.HIGHEST_PROTOCOL)
+        wxf.export(trajectories, output_path + '/trajectories/changes.wxf', target_format='wxf')
 
         del Vis, self.images
-
+            
+    
+    
 def unzip_images(path):
     imgFromZip  = lambda name: Image.open(io.BytesIO(zp.read(name)))
     with zipfile.ZipFile(path) as zp:

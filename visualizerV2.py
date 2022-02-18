@@ -196,7 +196,7 @@ class Visualizer():
                 f = lambda x: self._draw_split(x, stops[0], starts)
                 
             for t in range(t0, min(len(images), t0 + memory)): images[t - 1] = f(images[t - 1])
-        for i, x in enumerate(images): imageio.imwrite(path+'/%i.png'%i, x)
+        for i, x in tqdm(enumerate(images), desc = 'Writing ' + key + ' history '): imageio.imwrite(path+'/%i.png'%i, x)
 
     def _draw_entry(self, img, ID):
         def square(img, crd, size, color, width):
