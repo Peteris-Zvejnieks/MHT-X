@@ -167,7 +167,7 @@ class Visualizer():
         dcmap = discrete_colormap(memory * 2)
         cmap = cm.plasma
         if key != 'ID': values = nx.get_edge_attributes(self.interpretation.graph, key)
-        for i, tr in tqdm(enumerate(self.trajectories), desc = 'Drawing ' + key + ' history '):
+        for i, tr in tqdm(enumerate(self.trajectories), desc = 'Drawing trajectories in ' + key + ' history ', total = len(self.trajectories)):
             if len(tr) < min_trajectory_size: continue
             if key != 'ID': min_max = [min(tuple(values.values()) + (1e3,)), max(tuple(values.values()) + (0,))]
             color = self._map_color(dcmap(i))
@@ -175,7 +175,7 @@ class Visualizer():
                 t0 = int(self.data[edge[1]][0])
                 if key != 'ID': color = self._map_color(cmap(self._normalizer(values[edge], min_max)))
                 for t in range(t0, min(len(images), t0 + memory)): images[t - 1] = self._draw_edge(images[t - 1], edge, color)
-        for event in events:
+        for event in tqdm(events, desc = 'Drawing events in ' + key + ' history ', total = len(events)):
             stops, starts, likelihood = event
             if type(stops[0]) is str:  
                 if len(self.trajectories[(ID := starts[0])]) < min_trajectory_size: continue
@@ -196,7 +196,7 @@ class Visualizer():
                 f = lambda x: self._draw_split(x, stops[0], starts)
                 
             for t in range(t0, min(len(images), t0 + memory)): images[t - 1] = f(images[t - 1])
-        for i, x in tqdm(enumerate(images), desc = 'Writing ' + key + ' history '): imageio.imwrite(path+'/%i.png'%i, x)
+        for i, x in tqdm(enumerate(images), desc = 'Writing ' + key + ' history to disc ', total = len(images)): imageio.imwrite(path+'/%i.png'%i, x)
 
     def _draw_entry(self, img, ID):
         def square(img, crd, size, color, width):
