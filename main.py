@@ -14,11 +14,11 @@ np.set_printoptions(suppress=True)
 #%%
 # drive = 'C:\\'
 # w_dir = drive + os.path.join(*(os.getcwd().split('\\')[1:-1] + ['Objects']))
-w_dir = r'C:\Users\User\Documents\Zvejnieks\ParticleProcessing\Particles\for_tracing'
+w_dir = r'D:\Zvejnieks\Particles\for_tracing'
 os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 6
+I = 15
 J = 0
 
 sub_dirs = glob.glob(main_dirs[I] + '/*')
@@ -47,8 +47,17 @@ A                   = 0.01 # a
 # Shouln't really be tinkered with, this is fine
 Boundary            = 7 # not in definition
 
+path = sub_dir + '\\Compressed Data\\Shapes.zip'
+import zipfile, io
+from PIL import Image as img
+with zipfile.ZipFile(path) as zp:
+    names = zp.namelist()
+    try:    names.remove(*[x for x in names if len(x.split('/')[-1]) == 0 or x.split(',')[-1] == 'ini'])
+    except: pass
+    image = img.open(io.BytesIO(zp.read(names[0])))
+
 # Make this as large as is the wish for the sequence
-Width               = 424 # not stricly in definition
+Width               = image.width # not stricly in definition
 # Boundary and Width make up b
 exitt   = exit_entry_func(A, Boundary, 1, 0)
 entry   = exit_entry_func(-A, Width - Boundary, 0, 0)
@@ -66,7 +75,7 @@ SoiMax = 7              # R_max
 SoiVelScaler = 200      # lambda
 
 # This can be played around with freely, 0 - all hope on PIV, 1 - all hope on splines
-Extrap_w = 0.3          # alpha
+Extrap_w = 0.0         # alpha
 
 asc_condition  = association_condition(SoiMax, SoiVelScaler, Extrap_w)
 
