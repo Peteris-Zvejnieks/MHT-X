@@ -246,7 +246,7 @@ class Tracer():
             
         with open(output_path + '/trajectories/changes.pkl', 'wb') as f:
             pc.dump(changes, f, pc.HIGHEST_PROTOCOL)
-        wxf.export(trajectories, output_path + '/trajectories/changes.wxf', target_format='wxf')
+        wxf.export(changes, output_path + '/trajectories/changes.wxf', target_format='wxf')
 
         del Vis, self.images
             
