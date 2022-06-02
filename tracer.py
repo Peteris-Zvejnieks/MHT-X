@@ -262,7 +262,7 @@ def unzip_images(path):
         images = list(map(imgFromZip, tqdm(names, desc = 'Loading images ')))
 
     scaler_f = lambda x: (2**-8 * int(np.max(x) >= 256) + int(np.max(x) < 256) + 254 * int(np.max(x) == 1))
-    scaler   = scaler_f(np.asarray(images[0], np.uint16))
+    scaler   = scaler_f(np.asarray(images[15], np.uint16))
 
     mapper = lambda img:  np.repeat((np.asarray(img, np.uint16) * scaler).astype(np.uint8)[:,:,np.newaxis],3,2)
     images = list(map(mapper, tqdm(images, desc = 'Mapping images ')))
