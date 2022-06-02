@@ -18,7 +18,7 @@ w_dir = r'D:\Zvejnieks\Particles\for_tracing'
 os.chdir(w_dir)
 main_dirs = sorted(glob.glob('./*'))
 #%%
-I = 15
+I = 4
 J = 0
 
 sub_dirs = glob.glob(main_dirs[I] + '/*')
@@ -69,23 +69,24 @@ stat_funcs = [move, exitt, entry]
 
 # This is the most important one, ideally as big as could be, but can result in situations 
 # that can not be resoved till the heat death of the universe.
-SoiMax = 7              # R_max
+SoiMax = 6              # R_max
 
 # The bigger the lower the dropoff of R_max with respect to velocity
 SoiVelScaler = 200      # lambda
 
 # This can be played around with freely, 0 - all hope on PIV, 1 - all hope on splines
-Extrap_w = 0.0         # alpha
+Extrap_w = 0.3         # alpha
 
 asc_condition  = association_condition(SoiMax, SoiVelScaler, Extrap_w)
 
 ### MHT-X 
 ## eq 11
-Velocity_scaler_constr  = 200 # lambda
+Velocity_scaler_constr  = 130 # lambda
 
 ## eq 12
 # In my experience acts as a limmiter for jumps
-Max_acceleration        = 6 # a_c
+Max_acceleration        = 25 # a_c
+#this
 comb_constr = combination_constraint(Velocity_scaler_constr, Max_acceleration)
 
 aSSociator = aAssociator(asc_condition, comb_constr, max_k = 1)
@@ -145,4 +146,14 @@ print('Likelihood :', tracer.get_total_log_likelihood())
 string = '/search_'
 tracer.dump_data(string, memory = 15, smallest_trajectories = 5)
 import json
-with open(sub_dir + '/Tracer Output' +string +str(len(tracer.trajectories)) + '_' + str(tracer.get_total_log_likelihood()) + '/parameters.json', 'w') as fp: json.dump(parameters, fp)
+
+with open(sub_dir + '/Tracer Output' +string +str(len(tracer.trajectories)) + '_' + str(tracer.get_total_log_likelihood()) + '/parameters.json', 'w') as fp: 
+    json.dump(parameters, fp)
+    
+import pandas
+
+names = list(parameters.keys())
+values = list(parameters.values())
+params = list(zip(names, values))
+param_df = pandas.DataFrame(params)
+param_df.to_csv(sub_dir + '/Tracer Output' +string +str(len(tracer.trajectories)) + '_' + str(tracer.get_total_log_likelihood()) + '/parameters.csv', index = False, header = False)
