@@ -21,7 +21,7 @@ class Tracer():
                  path,
                  dim = 2):
 
-        self.dataset            = np.array((dataset := pd.read_excel('%s\\dataset.xlsx'%path)))
+        self.dataset            = np.array((dataset := pd.read_excel('%s\\dataset.csv'%path)))
         self.columns            = dataset.columns
         index                   = pd.MultiIndex.from_tuples(list(map(tuple, np.array(self.dataset, dtype = np.uint16)[:,:2])))
         self.multi_indexed      = pd.DataFrame(self.dataset[:,:2].astype(np.uint16), index = index)
