@@ -17,8 +17,8 @@ class discrete_colormap():
 class Colorbar_overlay():
     def __init__(self, cmap, shape, /, relative_size = [0.15, 0.02], relative_pos = [0.6, 0.05]):
         relative_size, relative_pos, shapeXY  = np.array(relative_size), np.array(relative_pos), np.array(shape[:-1])
-        self.cb_shape = (shapeXY * relative_size).astype(np.int)
-        self.pos = (shapeXY * relative_pos).astype(np.int)
+        self.cb_shape = (shapeXY * relative_size).astype(int)
+        self.pos = (shapeXY * relative_pos).astype(int)
 
         gradient = np.swapaxes(cmap(np.linspace(1, 0, self.cb_shape[0]))[:,:-1,np.newaxis], 1, 2)
         colorbar = 255 * np.repeat(gradient, self.cb_shape[1], axis = 1)

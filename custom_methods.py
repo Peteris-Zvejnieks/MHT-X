@@ -53,7 +53,12 @@ class association_condition(Association_condition):
 
 class combination_constraint(Combination_constraint):
     def __init__(self, upsilon, v_scaler = 10, max_a = 5):
-        d_fi = lambda u, v: np.arccos(np.dot(u, v)/(np.linalg.norm(u)*np.linalg.norm(v)))
+        
+        def d_fi(u, v):
+            a = np.arccos(np.dot(u, v)/(np.linalg.norm(u)*np.linalg.norm(v)))
+            if a != a: return 0
+            else: return a
+            
         def f(stops, starts):
             #If new or gone - defaults to True
             if len(stops) == 0 or len(starts) == 0: return True
@@ -72,6 +77,7 @@ class combination_constraint(Combination_constraint):
                     acc = 2 * (v - mid_v)/(start.changes[0,0] + dt)
                     if np.linalg.norm(acc) > max_a: return False
                     if d_fi(mid_v, v) > (np.pi + 1e-3) * np.exp(-np.linalg.norm(v)/v_scaler): return False
+                    
             #Area check
             S1, S2, sigs = 0, 0, 0
             for stop in stops:

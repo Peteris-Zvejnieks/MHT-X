@@ -10,6 +10,7 @@ import zipfile
 import glob
 import os
 import io
+import pickle as pc
 
 class Tracer():
     def __init__(self,
@@ -170,86 +171,83 @@ class Tracer():
         self.position   = nx.get_node_attributes(self.graph, 'position')
         self.params     = nx.get_node_attributes(self.graph, 'params')
 
-    def dump_data(self, sub_folder = None, images = None, memory = 15, smallest_trajectories = 1):
-        if images is None: self.images = unzip_images('%s\\Compressed Data\\Shapes.zip'%self.path)
-        else: self.images = images
+    def dump_data(self, sub_folder, images, memory = 15, smallest_trajectories = 1):
+        # self.images = unzip_images('%s\Shapes.zip'%self.path)
+        self.images = images
         self.shape = self.images[0].shape
         total_likelihood = self.get_total_log_likelihood()
 
+        interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
+        self.trajectories = interpretation.trajectories
+        interpretation.events()
+
         if sub_folder is None:  output_path = self.path + '/Tracer Output'
-        else:                   output_path = self.path + '/Tracer Output' + sub_folder + '_' + str(total_likelihood)
+        else:                   output_path = self.path + '/Tracer Output' + sub_folder + str(len(self.trajectories))+'_' + str(total_likelihood)
         try: os.makedirs(output_path)
         except: pass
+
+        def save_func(path, imgs):
+            try: os.makedirs(path)
+            except FileExistsError:
+                for old_img in glob.glob(path+'/**.jpg'): os.remove(old_img)
+            for i, x in tqdm(enumerate(imgs), desc = 'Saving: ' + path.split('/')[-1]): imageio.imwrite(path+'/%i.jpg'%i, x)
 
         def stringizer(value):
             if type(value) == np.ndarray: return str(list(value))
             else: return str(value)
-        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph_%i.gml'%total_likelihood, stringizer = stringizer)
-        interpretation = Graph_interpreter(self.graph, self.special_nodes, self.node_trajectory)
-        interpretation.events()
-        interpretation.families()
-        Vis = Visualizer(self.images, interpretation)
+        nx.readwrite.gml.write_gml(self.graph, output_path + '/graph_%s.gml'%total_likelihood, stringizer = stringizer)
+
+
+        Vis = Visualizer(self.images, interpretation, upscale = 2)
 
         try: os.mkdir(output_path + '/trajectories')
         except FileExistsError:
             try: os.remove(output_path + '/trajectories/events.csv')
             except: pass
 
-        #Trajectory visualization
-        path = output_path + '/trajectories/Images'
-        try: os.makedirs(path)
-        except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
-        Vis.ShowTrajectories(path)
-
-        #History visualization
-        path = output_path + '/tracedIDs'
-        try: os.makedirs(path)
-        except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
-        Vis.ShowHistory(path, memory, smallest_trajectories, 'ID')
-
-        #Family viusalization
-        path = output_path + '/family_ID_photos'
-        try: os.makedirs(path)
-        except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
-        Vis.ShowFamilies(path, 'ID')
-
-        #Trajectory csv output
-        try: os.makedirs(output_path + '/trajectories/changes')
-        except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/changes/**.csv'))
-        try: os.makedirs(output_path + '/trajectories/data')
-        except FileExistsError: map(os.remove, glob.glob(output_path + '/trajectories/data/**.csv'))
-
-        cols = ['dt'] + ['d'+x for x in self.columns[2:]] + ['likelihoods']
-        for i, track in enumerate(interpretation.trajectories):
-            table = pd.DataFrame(data = track.data, columns = self.columns)
-            table.to_csv(output_path + '/trajectories/data/data_%i.csv'%i, index = False)
-
-            table = pd.DataFrame(data = track.changes, columns = cols)
-            table.to_csv(output_path + '/trajectories/changes/changes_%i.csv'%i, index = False)
-
         with open(output_path + '/trajectories/events.csv', 'w') as file:
-             events_str = 'Type,In,Out,Frame,X,Y,likelihood\n'
-             for event in interpretation.Events:
+            events_str = 'Type, In, Out, Frame, X, Y, likelihood\n'
+            for event in tqdm(interpretation.Events, desc = 'Writing events: '):
                 if type(event[0][0]) is str:
                     tr = interpretation.trajectories[event[1][0]].beginning
                     tmp_str = str([0] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
                 elif type(event[1][0]) is str:
                     tr = interpretation.trajectories[event[0][0]].ending
                     tmp_str = str([1] + event[0] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
-                elif len(event[0]) > 1:
-                    tr = interpretation.trajectories[event[1][0]].beginning
-                    tmp_str = str([2] + [str(event[0]).replace(',', ';')[1:-1]] + event[1] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
-                elif len(event[1]) > 1:
-                    tr = interpretation.trajectories[event[0][0]].ending
-                    tmp_str = str([3] + event[0] + [str(event[1]).replace(',', ';')[1:-1]] + [tr[0]] + list(tr[2:4]) + [event[2]])[1:-1] + '\n'
                 events_str +=  tmp_str
-                file.write(events_str)
-            #Family graph output
-        try: os.mkdir(output_path + '/family_graphs')
-        except FileExistsError: map(os.remove, glob.glob(output_path + '/family_graphs/**.gml'))
-        for i, family_graph in tqdm(enumerate(interpretation.families), desc = 'Writing family graphs: '):
-            nx.readwrite.gml.write_gml(family_graph, output_path + '/family_graphs/family_%i.gml'%i, stringizer = str)
-    
+            file.write(events_str)
+
+        try: os.mkdir(output_path + '/trajectories')
+        except FileExistsError: pass
+
+        #Trajectory visualization
+        # path = output_path + '/trajectories/Images'
+        # try: os.makedirs(path)
+        # except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
+        # Vis.ShowTrajectories(path, 'likelihood')
+
+        #History visualization
+        path = output_path + '/tracedIDs'
+        try: os.makedirs(path)
+        except FileExistsError: map(os.remove, glob.glob(path + '/**.jpg'))
+        Vis.ShowHistory(path, memory, smallest_trajectories, 'ID')
+        
+        #Tajectory piclke output
+        cols = ['dt'] + ['d'+x for x in self.columns[2:]] + ['likelihoods']
+        trajectories = [self.columns]
+        changes = [cols]
+        for track in tqdm(interpretation.trajectories, desc = 'Pickling'):
+            trajectories.append(track.data)
+            changes.append(track.changes)
+            
+        with open(output_path + '/trajectories/trajectories.pkl', 'wb') as f:
+            pc.dump(trajectories, f, pc.HIGHEST_PROTOCOL)
+        # wxf.export(trajectories, output_path + '/trajectories/trajectories.wxf', target_format='wxf')
+            
+        with open(output_path + '/trajectories/changes.pkl', 'wb') as f:
+            pc.dump(changes, f, pc.HIGHEST_PROTOCOL)
+        # wxf.export(changes, output_path + '/trajectories/changes.wxf', target_format='wxf')
+
         del Vis, self.images
 
 def unzip_images(path):
@@ -263,8 +261,11 @@ def unzip_images(path):
 
     scaler_f = lambda x: (2**-8 * int(np.max(x) >= 256) + int(np.max(x) < 256) + 254 * int(np.max(x) == 1))
     scaler   = scaler_f(np.asarray(images[15], np.uint16))
-
-    mapper = lambda img:  np.repeat((np.asarray(img, np.uint16) * scaler).astype(np.uint8)[:,:,np.newaxis],3,2)
+    
+    if False:
+        mapper = lambda img:  np.repeat((np.asarray(img, np.uint16) * scaler).astype(np.uint8)[:,:,np.newaxis],3,2)
+    else:
+        mapper = lambda img:  (np.asarray(img, np.uint16) * scaler).astype(np.uint8)
     images = list(map(mapper, tqdm(images, desc = 'Mapping images ')))
 
     return images

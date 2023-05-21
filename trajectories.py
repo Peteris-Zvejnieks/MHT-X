@@ -3,6 +3,7 @@ import networkx as nx
 import numpy as np
 
 class node_trajectory_base():
+    smoother = 100
     class ExtrapolationError(Exception): pass
 
     def __init__(self, graph):
@@ -11,10 +12,10 @@ class node_trajectory_base():
         self.nodes.sort(key = lambda x: x[0])
         self._get_data()
         self._get_changes()
-        self._get_acceleration()
+        # self._get_acceleration()
         self._splinify()
 
-    def __repr__(self): return str(self.time)
+    def __repr__(self): return str(self.nodes)
     def __len__(self):  return len(self.nodes)
 
     def __call__(self, t):
@@ -50,8 +51,11 @@ class node_trajectory_base():
         self.acceleration = np.zeros((max(len(self) - 2, 1), 2))
         if len(self) > 2:
             norms = np.linalg.norm(self.displacements, axis = 1)
+            norm_mul = norms[1:] * norms[:-1]
+            loc = np.nonzero(norm_mul)
             dot_products = np.array(list(map(lambda x: np.dot(x[0], x[1]), zip(self.displacements[1:,:], self.displacements[:-1,:]))))
-            self.acceleration[:,0] = np.arccos(dot_products/(norms[1:] * norms[:-1]))/self.changes[1:,0]
+            self.acceleration = np.zeros([norm_mul.size, 2])
+            self.acceleration[loc, 0] = np.arccos(dot_products[loc]/norm_mul[loc])/self.changes[1:,0][loc]
             self.acceleration[:,1] = (norms[1:] - norms[:-1])/self.changes[1:,0]
 
     def _splinify(self):
@@ -60,9 +64,13 @@ class node_trajectory_base():
             if self.data.shape[0] <= 3: k = 1
             else:                       k = 3
             points = [self.positions[:,i] for i in range(self.positions.shape[1])]
-            self.tck, self.u = interp.splprep(points, u = self.time, k = k, s = 8e2)
+            self.tck, self.u = interp.splprep(points, u = self.time, k = k, s = self.smoother)
 
-    def interpolate(self, t, der = 0): return np.array(interp.splev(t, self.tck, der = der))
+    def interpolate(self, t, der = 0): 
+        try:
+            return np.array(interp.splev(t, self.tck, der = der))
+        except AttributeError:
+            raise node_trajectory_base.ExtrapolationError('cant interpolate')
 
     def split(self, i):
         if i > len(self) - 2: raise IndexError
